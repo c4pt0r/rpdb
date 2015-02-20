@@ -56,7 +56,13 @@ func (db *BoltDB) Close() {
 
 func (db *BoltDB) Clear() error {
 	err := db.db.Update(func(tx *bolt.Tx) error {
-		return tx.DeleteBucket(bucketName)
+		if err := tx.DeleteBucket(bucketName); err != nil {
+			return err
+		}
+		if _, err := tx.CreateBucketIfNotExists(bucketName); err != nil {
+			return err
+		}
+		return nil
 	})
 	return err
 }
@@ -115,12 +121,12 @@ func (db *BoltDB) Commit(bt *store.Batch) error {
 	return err
 }
 
-func (db *BoltDB) Compact(start, limit []byte) error {
-	return nil
-}
-
 func (db *BoltDB) NewSnapshot() store.Snapshot {
 	return newSnapshot(db)
+}
+
+func (db *BoltDB) Compact(start, limit []byte) error {
+	return nil
 }
 
 func (db *BoltDB) Stats() string {
