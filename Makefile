@@ -2,7 +2,7 @@ all: build
 
 build:
 	@mkdir -p bin; rm -rf testdb-rocksdb/*
-	go build -o bin/redis-binlog ./cmd && ./bin/redis-binlog -c conf/config.toml -n 4 --create
+	go build -o bin/rpdb ./cmd && ./bin/rpdb -c conf/config.toml -n 4 --create
 
 clean:
 	rm -rf bin/* testdb-rocksdb sync.pipe

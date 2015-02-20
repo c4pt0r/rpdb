@@ -13,13 +13,14 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/docopt/docopt-go"
+	"github.com/wandoulabs/redis-port/pkg/libs/errors"
+	"github.com/wandoulabs/redis-port/pkg/libs/log"
 	"github.com/wandoulabs/rpdb/pkg/rpdb"
 	"github.com/wandoulabs/rpdb/pkg/service"
 	"github.com/wandoulabs/rpdb/pkg/store"
+	"github.com/wandoulabs/rpdb/pkg/store/boltdb"
 	"github.com/wandoulabs/rpdb/pkg/store/leveldb"
 	"github.com/wandoulabs/rpdb/pkg/store/rocksdb"
-	"github.com/wandoulabs/redis-port/pkg/libs/errors"
-	"github.com/wandoulabs/redis-port/pkg/libs/log"
 )
 
 var args struct {
@@ -41,6 +42,7 @@ type Config struct {
 	Service *service.Config `toml:"service"`
 	LevelDB *leveldb.Config `toml:"leveldb"`
 	RocksDB *rocksdb.Config `toml:"rocksdb"`
+	BoltDB  *boltdb.Config  `toml:"boltdb"`
 }
 
 func (c *Config) LoadFromFile(path string) error {
@@ -109,6 +111,8 @@ Options:
 		db, err = leveldb.Open(conf.DBPath, conf.LevelDB, args.create, args.repair)
 	case "rocksdb":
 		db, err = rocksdb.Open(conf.DBPath, conf.RocksDB, args.create, args.repair)
+	case "boltdb":
+		db, err = boltdb.Open(conf.DBPath, conf.BoltDB, args.create, args.repair)
 	}
 
 	if err != nil {
