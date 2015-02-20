@@ -1,7 +1,7 @@
 // Copyright 2014 Wandoujia Inc. All Rights Reserved.
 // Licensed under the MIT (MIT-LICENSE.txt) license.
 
-package binlog
+package rpdb
 
 import (
 	"container/list"
@@ -15,10 +15,10 @@ import (
 )
 
 var (
-	ErrSnapClosed = errors.Static("binlog snapshot has been closed")
+	ErrSnapClosed = errors.Static("rpdb snapshot has been closed")
 )
 
-type BinlogSnapshot struct {
+type RpdbSnapshot struct {
 	mu sync.Mutex
 	sp store.Snapshot
 
@@ -32,7 +32,7 @@ type BinlogSnapshot struct {
 	}
 }
 
-func (s *BinlogSnapshot) acquire() error {
+func (s *RpdbSnapshot) acquire() error {
 	s.mu.Lock()
 	if s.sp != nil {
 		return nil
@@ -41,11 +41,11 @@ func (s *BinlogSnapshot) acquire() error {
 	return errors.Trace(ErrSnapClosed)
 }
 
-func (s *BinlogSnapshot) release() {
+func (s *RpdbSnapshot) release() {
 	s.mu.Unlock()
 }
 
-func (s *BinlogSnapshot) Close() {
+func (s *RpdbSnapshot) Close() {
 	if err := s.acquire(); err != nil {
 		return
 	}
@@ -64,7 +64,7 @@ func (s *BinlogSnapshot) Close() {
 	log.Infof("snapshot is closed")
 }
 
-func (s *BinlogSnapshot) getReader() *snapshotReader {
+func (s *RpdbSnapshot) getReader() *snapshotReader {
 	s.readers.Lock()
 	defer s.readers.Unlock()
 	if e := s.readers.Front(); e != nil {
@@ -73,7 +73,7 @@ func (s *BinlogSnapshot) getReader() *snapshotReader {
 	return &snapshotReader{sp: s.sp}
 }
 
-func (s *BinlogSnapshot) putReader(r *snapshotReader) {
+func (s *RpdbSnapshot) putReader(r *snapshotReader) {
 	s.readers.Lock()
 	s.readers.PushFront(r)
 	s.readers.Unlock()
@@ -81,14 +81,14 @@ func (s *BinlogSnapshot) putReader(r *snapshotReader) {
 
 type snapshotReader struct {
 	sp store.Snapshot
-	it *binlogIterator
+	it *rpdbIterator
 }
 
 func (s *snapshotReader) getRowValue(key []byte) ([]byte, error) {
 	return s.sp.Get(key)
 }
 
-func (s *snapshotReader) getIterator() (it *binlogIterator) {
+func (s *snapshotReader) getIterator() (it *rpdbIterator) {
 	if s.it != nil {
 		it, s.it = s.it, nil
 		if it.Error() == nil {
@@ -96,10 +96,10 @@ func (s *snapshotReader) getIterator() (it *binlogIterator) {
 		}
 		it.Close()
 	}
-	return &binlogIterator{Iterator: s.sp.NewIterator()}
+	return &rpdbIterator{Iterator: s.sp.NewIterator()}
 }
 
-func (s *snapshotReader) putIterator(it *binlogIterator) {
+func (s *snapshotReader) putIterator(it *rpdbIterator) {
 	if s.it == nil {
 		if it.Error() == nil {
 			s.it = it
@@ -116,7 +116,7 @@ func (s *snapshotReader) cleanup() {
 	}
 }
 
-func (s *BinlogSnapshot) LoadObjCron(wait time.Duration, ncpu, step int) ([]*rdb.ObjEntry, bool, error) {
+func (s *RpdbSnapshot) LoadObjCron(wait time.Duration, ncpu, step int) ([]*rdb.ObjEntry, bool, error) {
 	if err := s.acquire(); err != nil {
 		return nil, false, err
 	}
@@ -171,7 +171,7 @@ func (s *BinlogSnapshot) LoadObjCron(wait time.Duration, ncpu, step int) ([]*rdb
 	return rets.objs, rets.more, rets.err
 }
 
-func (s *BinlogSnapshot) scanMetaKey() (metaKey []byte, err error) {
+func (s *RpdbSnapshot) scanMetaKey() (metaKey []byte, err error) {
 	s.cursor.Lock()
 	defer s.cursor.Unlock()
 	it := s.cursor.it
@@ -191,7 +191,7 @@ func (s *BinlogSnapshot) scanMetaKey() (metaKey []byte, err error) {
 	return metaKey, it.Error()
 }
 
-func (s *BinlogSnapshot) loadObjCron(ctrl <-chan int, exit chan<- int) (objs []*rdb.ObjEntry, more bool, err error) {
+func (s *RpdbSnapshot) loadObjCron(ctrl <-chan int, exit chan<- int) (objs []*rdb.ObjEntry, more bool, err error) {
 	r := s.getReader()
 	defer s.putReader(r)
 	defer func() {
@@ -224,7 +224,7 @@ func (s *BinlogSnapshot) loadObjCron(ctrl <-chan int, exit chan<- int) (objs []*
 	}
 }
 
-func (s *BinlogSnapshot) loadRowCron(ctrl <-chan int, exit chan<- int) (rows []binlogRow, more bool, err error) {
+func (s *RpdbSnapshot) loadRowCron(ctrl <-chan int, exit chan<- int) (rows []rpdbRow, more bool, err error) {
 	r := s.getReader()
 	defer s.putReader(r)
 	defer func() {
@@ -247,7 +247,7 @@ func (s *BinlogSnapshot) loadRowCron(ctrl <-chan int, exit chan<- int) (rows []b
 		if err != nil {
 			return nil, false, err
 		}
-		o, err := loadBinlogRow(r, db, key)
+		o, err := loadRpdbRow(r, db, key)
 		if err != nil {
 			return nil, false, err
 		}

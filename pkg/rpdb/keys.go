@@ -1,7 +1,7 @@
 // Copyright 2014 Wandoujia Inc. All Rights Reserved.
 // Licensed under the MIT (MIT-LICENSE.txt) license.
 
-package binlog
+package rpdb
 
 import (
 	"time"
@@ -16,8 +16,8 @@ const (
 	MaxExpireAt = 1e15
 )
 
-func (b *Binlog) loadBinlogRow(db uint32, key []byte, deleteIfExpired bool) (binlogRow, error) {
-	o, err := loadBinlogRow(b, db, key)
+func (b *Rpdb) loadRpdbRow(db uint32, key []byte, deleteIfExpired bool) (rpdbRow, error) {
+	o, err := loadRpdbRow(b, db, key)
 	if err != nil || o == nil {
 		return nil, err
 	}
@@ -32,8 +32,8 @@ func (b *Binlog) loadBinlogRow(db uint32, key []byte, deleteIfExpired bool) (bin
 	return o, nil
 }
 
-func (b *Binlog) deleteIfExists(bt *store.Batch, db uint32, key []byte) (bool, error) {
-	o, err := b.loadBinlogRow(db, key, false)
+func (b *Rpdb) deleteIfExists(bt *store.Batch, db uint32, key []byte) (bool, error) {
+	o, err := b.loadRpdbRow(db, key, false)
 	if err != nil || o == nil {
 		return false, err
 	}
@@ -41,7 +41,7 @@ func (b *Binlog) deleteIfExists(bt *store.Batch, db uint32, key []byte) (bool, e
 }
 
 // DEL key [key ...]
-func (b *Binlog) Del(db uint32, args ...interface{}) (int64, error) {
+func (b *Rpdb) Del(db uint32, args ...interface{}) (int64, error) {
 	if len(args) == 0 {
 		return 0, errArguments("len(args) = %d, expect != 0", len(args))
 	}
@@ -59,7 +59,7 @@ func (b *Binlog) Del(db uint32, args ...interface{}) (int64, error) {
 	defer b.release()
 
 	for _, key := range keys {
-		_, err := b.loadBinlogRow(db, key, true)
+		_, err := b.loadRpdbRow(db, key, true)
 		if err != nil {
 			return 0, err
 		}
@@ -83,7 +83,7 @@ func (b *Binlog) Del(db uint32, args ...interface{}) (int64, error) {
 }
 
 // DUMP key
-func (b *Binlog) Dump(db uint32, args ...interface{}) (interface{}, error) {
+func (b *Rpdb) Dump(db uint32, args ...interface{}) (interface{}, error) {
 	if len(args) != 1 {
 		return nil, errArguments("len(args) = %d, expect = 1", len(args))
 	}
@@ -100,7 +100,7 @@ func (b *Binlog) Dump(db uint32, args ...interface{}) (interface{}, error) {
 	}
 	defer b.release()
 
-	o, err := b.loadBinlogRow(db, key, true)
+	o, err := b.loadRpdbRow(db, key, true)
 	if err != nil || o == nil {
 		return nil, err
 	} else {
@@ -113,7 +113,7 @@ func (b *Binlog) Dump(db uint32, args ...interface{}) (interface{}, error) {
 }
 
 // TYPE key
-func (b *Binlog) Type(db uint32, args ...interface{}) (ObjectCode, error) {
+func (b *Rpdb) Type(db uint32, args ...interface{}) (ObjectCode, error) {
 	if len(args) != 1 {
 		return 0, errArguments("len(args) = %d, expect = 1", len(args))
 	}
@@ -130,7 +130,7 @@ func (b *Binlog) Type(db uint32, args ...interface{}) (ObjectCode, error) {
 	}
 	defer b.release()
 
-	o, err := b.loadBinlogRow(db, key, true)
+	o, err := b.loadRpdbRow(db, key, true)
 	if err != nil || o == nil {
 		return 0, err
 	}
@@ -138,7 +138,7 @@ func (b *Binlog) Type(db uint32, args ...interface{}) (ObjectCode, error) {
 }
 
 // EXISTS key
-func (b *Binlog) Exists(db uint32, args ...interface{}) (int64, error) {
+func (b *Rpdb) Exists(db uint32, args ...interface{}) (int64, error) {
 	if len(args) != 1 {
 		return 0, errArguments("len(args) = %d, expect = 1", len(args))
 	}
@@ -155,7 +155,7 @@ func (b *Binlog) Exists(db uint32, args ...interface{}) (int64, error) {
 	}
 	defer b.release()
 
-	o, err := b.loadBinlogRow(db, key, true)
+	o, err := b.loadRpdbRow(db, key, true)
 	if err != nil || o == nil {
 		return 0, err
 	} else {
@@ -164,7 +164,7 @@ func (b *Binlog) Exists(db uint32, args ...interface{}) (int64, error) {
 }
 
 // TTL key
-func (b *Binlog) TTL(db uint32, args ...interface{}) (int64, error) {
+func (b *Rpdb) TTL(db uint32, args ...interface{}) (int64, error) {
 	if len(args) != 1 {
 		return 0, errArguments("len(args) = %d, expect = 1", len(args))
 	}
@@ -189,7 +189,7 @@ func (b *Binlog) TTL(db uint32, args ...interface{}) (int64, error) {
 }
 
 // PTTL key
-func (b *Binlog) PTTL(db uint32, args ...interface{}) (int64, error) {
+func (b *Rpdb) PTTL(db uint32, args ...interface{}) (int64, error) {
 	if len(args) != 1 {
 		return 0, errArguments("len(args) = %d, expect = 1", len(args))
 	}
@@ -209,8 +209,8 @@ func (b *Binlog) PTTL(db uint32, args ...interface{}) (int64, error) {
 	return b.getExpireTTLms(db, key)
 }
 
-func (b *Binlog) getExpireTTLms(db uint32, key []byte) (int64, error) {
-	o, err := b.loadBinlogRow(db, key, true)
+func (b *Rpdb) getExpireTTLms(db uint32, key []byte) (int64, error) {
+	o, err := b.loadRpdbRow(db, key, true)
 	if err != nil {
 		return 0, err
 	}
@@ -222,8 +222,8 @@ func (b *Binlog) getExpireTTLms(db uint32, key []byte) (int64, error) {
 	}
 }
 
-func (b *Binlog) setExpireAt(db uint32, key []byte, expireat uint64) (int64, error) {
-	o, err := b.loadBinlogRow(db, key, true)
+func (b *Rpdb) setExpireAt(db uint32, key []byte, expireat uint64) (int64, error) {
+	o, err := b.loadRpdbRow(db, key, true)
 	if err != nil || o == nil {
 		return 0, err
 	}
@@ -244,7 +244,7 @@ func (b *Binlog) setExpireAt(db uint32, key []byte, expireat uint64) (int64, err
 }
 
 // PERSIST key
-func (b *Binlog) Persist(db uint32, args ...interface{}) (int64, error) {
+func (b *Rpdb) Persist(db uint32, args ...interface{}) (int64, error) {
 	if len(args) != 1 {
 		return 0, errArguments("len(args) = %d, expect = 1", len(args))
 	}
@@ -261,7 +261,7 @@ func (b *Binlog) Persist(db uint32, args ...interface{}) (int64, error) {
 	}
 	defer b.release()
 
-	o, err := b.loadBinlogRow(db, key, true)
+	o, err := b.loadRpdbRow(db, key, true)
 	if err != nil || o == nil {
 		return 0, err
 	}
@@ -277,7 +277,7 @@ func (b *Binlog) Persist(db uint32, args ...interface{}) (int64, error) {
 }
 
 // EXPIRE key seconds
-func (b *Binlog) Expire(db uint32, args ...interface{}) (int64, error) {
+func (b *Rpdb) Expire(db uint32, args ...interface{}) (int64, error) {
 	if len(args) != 2 {
 		return 0, errArguments("len(args) = %d, expect = 2", len(args))
 	}
@@ -306,7 +306,7 @@ func (b *Binlog) Expire(db uint32, args ...interface{}) (int64, error) {
 }
 
 // PEXPIRE key milliseconds
-func (b *Binlog) PExpire(db uint32, args ...interface{}) (int64, error) {
+func (b *Rpdb) PExpire(db uint32, args ...interface{}) (int64, error) {
 	if len(args) != 2 {
 		return 0, errArguments("len(args) = %d, expect = 2", len(args))
 	}
@@ -335,7 +335,7 @@ func (b *Binlog) PExpire(db uint32, args ...interface{}) (int64, error) {
 }
 
 // EXPIREAT key timestamp
-func (b *Binlog) ExpireAt(db uint32, args ...interface{}) (int64, error) {
+func (b *Rpdb) ExpireAt(db uint32, args ...interface{}) (int64, error) {
 	if len(args) != 2 {
 		return 0, errArguments("len(args) = %d, expect = 2", len(args))
 	}
@@ -365,7 +365,7 @@ func (b *Binlog) ExpireAt(db uint32, args ...interface{}) (int64, error) {
 }
 
 // PEXPIREAT key milliseconds-timestamp
-func (b *Binlog) PExpireAt(db uint32, args ...interface{}) (int64, error) {
+func (b *Rpdb) PExpireAt(db uint32, args ...interface{}) (int64, error) {
 	if len(args) != 2 {
 		return 0, errArguments("len(args) = %d, expect = 2", len(args))
 	}
@@ -395,7 +395,7 @@ func (b *Binlog) PExpireAt(db uint32, args ...interface{}) (int64, error) {
 }
 
 // RESTORE key ttlms value
-func (b *Binlog) Restore(db uint32, args ...interface{}) error {
+func (b *Rpdb) Restore(db uint32, args ...interface{}) error {
 	if len(args) != 3 {
 		return errArguments("len(args) = %d, expect = 3", len(args))
 	}
@@ -435,14 +435,14 @@ func (b *Binlog) Restore(db uint32, args ...interface{}) error {
 	return b.commit(bt, fw)
 }
 
-func (b *Binlog) restore(bt *store.Batch, db uint32, key []byte, expireat uint64, obj interface{}) error {
+func (b *Rpdb) restore(bt *store.Batch, db uint32, key []byte, expireat uint64, obj interface{}) error {
 	_, err := b.deleteIfExists(bt, db, key)
 	if err != nil {
 		return err
 	}
 
 	if !IsExpired(expireat) {
-		var o binlogRow
+		var o rpdbRow
 		switch obj.(type) {
 		default:
 			return errors.Trace(ErrObjectValue)
@@ -464,23 +464,23 @@ func (b *Binlog) restore(bt *store.Batch, db uint32, key []byte, expireat uint64
 	return nil
 }
 
-func (b *Binlog) CompactAll() error {
+func (b *Rpdb) CompactAll() error {
 	if err := b.acquire(); err != nil {
 		return err
 	}
 	defer b.release()
-	log.Infof("binlog is compacting all...")
+	log.Infof("rpdb is compacting all...")
 	if err := b.compact([]byte{MetaCode}, []byte{MetaCode + 1}); err != nil {
 		return err
 	}
 	if err := b.compact([]byte{DataCode}, []byte{DataCode + 1}); err != nil {
 		return err
 	}
-	log.Infof("binlog is compacted")
+	log.Infof("rpdb is compacted")
 	return nil
 }
 
-func (b *Binlog) Info() (string, error) {
+func (b *Rpdb) Info() (string, error) {
 	if err := b.acquire(); err != nil {
 		return "", err
 	}

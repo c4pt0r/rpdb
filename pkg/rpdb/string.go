@@ -1,7 +1,7 @@
 // Copyright 2014 Wandoujia Inc. All Rights Reserved.
 // Licensed under the MIT (MIT-LICENSE.txt) license.
 
-package binlog
+package rpdb
 
 import (
 	"github.com/wandoulabs/rpdb/pkg/store"
@@ -10,31 +10,31 @@ import (
 )
 
 type stringRow struct {
-	*binlogRowHelper
+	*rpdbRowHelper
 
 	Value []byte
 }
 
 func newStringRow(db uint32, key []byte) *stringRow {
 	o := &stringRow{}
-	o.lazyInit(newBinlogRowHelper(db, key, StringCode))
+	o.lazyInit(newRpdbRowHelper(db, key, StringCode))
 	return o
 }
 
-func (o *stringRow) lazyInit(h *binlogRowHelper) {
-	o.binlogRowHelper = h
+func (o *stringRow) lazyInit(h *rpdbRowHelper) {
+	o.rpdbRowHelper = h
 	o.dataKeyRefs = nil
 	o.metaValueRefs = nil
 	o.dataValueRefs = []interface{}{&o.Value}
 }
 
-func (o *stringRow) deleteObject(b *Binlog, bt *store.Batch) error {
+func (o *stringRow) deleteObject(b *Rpdb, bt *store.Batch) error {
 	bt.Del(o.DataKey())
 	bt.Del(o.MetaKey())
 	return nil
 }
 
-func (o *stringRow) storeObject(b *Binlog, bt *store.Batch, expireat uint64, obj interface{}) error {
+func (o *stringRow) storeObject(b *Rpdb, bt *store.Batch, expireat uint64, obj interface{}) error {
 	value, ok := obj.(rdb.String)
 	if !ok || len(value) == 0 {
 		return errors.Trace(ErrObjectValue)
@@ -46,7 +46,7 @@ func (o *stringRow) storeObject(b *Binlog, bt *store.Batch, expireat uint64, obj
 	return nil
 }
 
-func (o *stringRow) loadObjectValue(r binlogReader) (interface{}, error) {
+func (o *stringRow) loadObjectValue(r rpdbReader) (interface{}, error) {
 	_, err := o.LoadDataValue(r)
 	if err != nil {
 		return nil, err
@@ -54,8 +54,8 @@ func (o *stringRow) loadObjectValue(r binlogReader) (interface{}, error) {
 	return rdb.String(o.Value), nil
 }
 
-func (b *Binlog) loadStringRow(db uint32, key []byte, deleteIfExpired bool) (*stringRow, error) {
-	o, err := b.loadBinlogRow(db, key, deleteIfExpired)
+func (b *Rpdb) loadStringRow(db uint32, key []byte, deleteIfExpired bool) (*stringRow, error) {
+	o, err := b.loadRpdbRow(db, key, deleteIfExpired)
 	if err != nil {
 		return nil, err
 	} else if o != nil {
@@ -69,7 +69,7 @@ func (b *Binlog) loadStringRow(db uint32, key []byte, deleteIfExpired bool) (*st
 }
 
 // GET key
-func (b *Binlog) Get(db uint32, args ...interface{}) ([]byte, error) {
+func (b *Rpdb) Get(db uint32, args ...interface{}) ([]byte, error) {
 	if len(args) != 1 {
 		return nil, errArguments("len(args) = %d, expect = 1", len(args))
 	}
@@ -99,7 +99,7 @@ func (b *Binlog) Get(db uint32, args ...interface{}) ([]byte, error) {
 }
 
 // APPEND key value
-func (b *Binlog) Append(db uint32, args ...interface{}) (int64, error) {
+func (b *Rpdb) Append(db uint32, args ...interface{}) (int64, error) {
 	if len(args) != 2 {
 		return 0, errArguments("len(args) = %d, expect = 2", len(args))
 	}
@@ -139,7 +139,7 @@ func (b *Binlog) Append(db uint32, args ...interface{}) (int64, error) {
 }
 
 // SET key value
-func (b *Binlog) Set(db uint32, args ...interface{}) error {
+func (b *Rpdb) Set(db uint32, args ...interface{}) error {
 	if len(args) != 2 {
 		return errArguments("len(args) = %d, expect = 2", len(args))
 	}
@@ -170,7 +170,7 @@ func (b *Binlog) Set(db uint32, args ...interface{}) error {
 }
 
 // SETEX key seconds value
-func (b *Binlog) SetEX(db uint32, args ...interface{}) error {
+func (b *Rpdb) SetEX(db uint32, args ...interface{}) error {
 	if len(args) != 3 {
 		return errArguments("len(args) = %d, expect = 3", len(args))
 	}
@@ -216,7 +216,7 @@ func (b *Binlog) SetEX(db uint32, args ...interface{}) error {
 }
 
 // SETNX key value
-func (b *Binlog) SetNX(db uint32, args ...interface{}) (int64, error) {
+func (b *Rpdb) SetNX(db uint32, args ...interface{}) (int64, error) {
 	if len(args) != 2 {
 		return 0, errArguments("len(args) = %d, expect = 2", len(args))
 	}
@@ -233,7 +233,7 @@ func (b *Binlog) SetNX(db uint32, args ...interface{}) (int64, error) {
 	}
 	defer b.release()
 
-	o, err := b.loadBinlogRow(db, key, true)
+	o, err := b.loadRpdbRow(db, key, true)
 	if err != nil || o != nil {
 		return 0, err
 	} else {
@@ -248,7 +248,7 @@ func (b *Binlog) SetNX(db uint32, args ...interface{}) (int64, error) {
 }
 
 // GETSET key value
-func (b *Binlog) GetSet(db uint32, args ...interface{}) ([]byte, error) {
+func (b *Rpdb) GetSet(db uint32, args ...interface{}) ([]byte, error) {
 	if len(args) != 2 {
 		return nil, errArguments("len(args) = %d, expect = 2", len(args))
 	}
@@ -290,7 +290,7 @@ func (b *Binlog) GetSet(db uint32, args ...interface{}) ([]byte, error) {
 	return value, b.commit(bt, fw)
 }
 
-func (b *Binlog) incrInt(db uint32, key []byte, delta int64) (int64, error) {
+func (b *Rpdb) incrInt(db uint32, key []byte, delta int64) (int64, error) {
 	o, err := b.loadStringRow(db, key, true)
 	if err != nil {
 		return 0, err
@@ -317,7 +317,7 @@ func (b *Binlog) incrInt(db uint32, key []byte, delta int64) (int64, error) {
 	return delta, b.commit(bt, fw)
 }
 
-func (b *Binlog) incrFloat(db uint32, key []byte, delta float64) (float64, error) {
+func (b *Rpdb) incrFloat(db uint32, key []byte, delta float64) (float64, error) {
 	o, err := b.loadStringRow(db, key, true)
 	if err != nil {
 		return 0, err
@@ -345,7 +345,7 @@ func (b *Binlog) incrFloat(db uint32, key []byte, delta float64) (float64, error
 }
 
 // INCR key
-func (b *Binlog) Incr(db uint32, args ...interface{}) (int64, error) {
+func (b *Rpdb) Incr(db uint32, args ...interface{}) (int64, error) {
 	if len(args) != 1 {
 		return 0, errArguments("len(args) = %d, expect = 1", len(args))
 	}
@@ -366,7 +366,7 @@ func (b *Binlog) Incr(db uint32, args ...interface{}) (int64, error) {
 }
 
 // INCRBY key delta
-func (b *Binlog) IncrBy(db uint32, args ...interface{}) (int64, error) {
+func (b *Rpdb) IncrBy(db uint32, args ...interface{}) (int64, error) {
 	if len(args) != 2 {
 		return 0, errArguments("len(args) = %d, expect = 2", len(args))
 	}
@@ -388,7 +388,7 @@ func (b *Binlog) IncrBy(db uint32, args ...interface{}) (int64, error) {
 }
 
 // DECR key
-func (b *Binlog) Decr(db uint32, args ...interface{}) (int64, error) {
+func (b *Rpdb) Decr(db uint32, args ...interface{}) (int64, error) {
 	if len(args) != 1 {
 		return 0, errArguments("len(args) = %d, expect = 1", len(args))
 	}
@@ -409,7 +409,7 @@ func (b *Binlog) Decr(db uint32, args ...interface{}) (int64, error) {
 }
 
 // DECRBY key delta
-func (b *Binlog) DecrBy(db uint32, args ...interface{}) (int64, error) {
+func (b *Rpdb) DecrBy(db uint32, args ...interface{}) (int64, error) {
 	if len(args) != 2 {
 		return 0, errArguments("len(args) = %d, expect = 2", len(args))
 	}
@@ -431,7 +431,7 @@ func (b *Binlog) DecrBy(db uint32, args ...interface{}) (int64, error) {
 }
 
 // INCRBYFLOAT key delta
-func (b *Binlog) IncrByFloat(db uint32, args ...interface{}) (float64, error) {
+func (b *Rpdb) IncrByFloat(db uint32, args ...interface{}) (float64, error) {
 	if len(args) != 2 {
 		return 0, errArguments("len(args) = %d, expect = 2", len(args))
 	}
@@ -453,7 +453,7 @@ func (b *Binlog) IncrByFloat(db uint32, args ...interface{}) (float64, error) {
 }
 
 // SETBIT key offset value
-func (b *Binlog) SetBit(db uint32, args ...interface{}) (int64, error) {
+func (b *Rpdb) SetBit(db uint32, args ...interface{}) (int64, error) {
 	if len(args) != 3 {
 		return 0, errArguments("len(args) = %d, expect = 3", len(args))
 	}
@@ -513,7 +513,7 @@ func (b *Binlog) SetBit(db uint32, args ...interface{}) (int64, error) {
 }
 
 // SETRANGE key offset value
-func (b *Binlog) SetRange(db uint32, args ...interface{}) (int64, error) {
+func (b *Rpdb) SetRange(db uint32, args ...interface{}) (int64, error) {
 	if len(args) != 3 {
 		return 0, errArguments("len(args) = %d, expect = 3", len(args))
 	}
@@ -559,7 +559,7 @@ func (b *Binlog) SetRange(db uint32, args ...interface{}) (int64, error) {
 }
 
 // MSET key value [key value ...]
-func (b *Binlog) MSet(db uint32, args ...interface{}) error {
+func (b *Rpdb) MSet(db uint32, args ...interface{}) error {
 	if len(args) == 0 || len(args)%2 != 0 {
 		return errArguments("len(args) = %d, expect != 0 && mod 2 = 0", len(args))
 	}
@@ -597,7 +597,7 @@ func (b *Binlog) MSet(db uint32, args ...interface{}) error {
 }
 
 // MSETNX key value [key value ...]
-func (b *Binlog) MSetNX(db uint32, args ...interface{}) (int64, error) {
+func (b *Rpdb) MSetNX(db uint32, args ...interface{}) (int64, error) {
 	if len(args) == 0 || len(args)%2 != 0 {
 		return 0, errArguments("len(args) = %d, expect != 0 && mod 2 = 0", len(args))
 	}
@@ -615,7 +615,7 @@ func (b *Binlog) MSetNX(db uint32, args ...interface{}) (int64, error) {
 	defer b.release()
 
 	for i := 0; i < len(pairs); i += 2 {
-		o, err := b.loadBinlogRow(db, pairs[i], true)
+		o, err := b.loadRpdbRow(db, pairs[i], true)
 		if err != nil || o != nil {
 			return 0, err
 		}
@@ -638,7 +638,7 @@ func (b *Binlog) MSetNX(db uint32, args ...interface{}) (int64, error) {
 }
 
 // MGET key [key ...]
-func (b *Binlog) MGet(db uint32, args ...interface{}) ([][]byte, error) {
+func (b *Rpdb) MGet(db uint32, args ...interface{}) ([][]byte, error) {
 	if len(args) == 0 {
 		return nil, errArguments("len(args) = %d, expect != 0", len(args))
 	}
@@ -656,7 +656,7 @@ func (b *Binlog) MGet(db uint32, args ...interface{}) ([][]byte, error) {
 	defer b.release()
 
 	for _, key := range keys {
-		_, err := b.loadBinlogRow(db, key, true)
+		_, err := b.loadRpdbRow(db, key, true)
 		if err != nil {
 			return nil, err
 		}
@@ -680,7 +680,7 @@ func (b *Binlog) MGet(db uint32, args ...interface{}) ([][]byte, error) {
 }
 
 // GETBIT key offset
-func (b *Binlog) GetBit(db uint32, args ...interface{}) (int64, error) {
+func (b *Rpdb) GetBit(db uint32, args ...interface{}) (int64, error) {
 	if len(args) != 2 {
 		return 0, errArguments("len(args) = %d, expect = 2", len(args))
 	}
@@ -724,7 +724,7 @@ func (b *Binlog) GetBit(db uint32, args ...interface{}) (int64, error) {
 }
 
 // GETRANGE key beg end
-func (b *Binlog) GetRange(db uint32, args ...interface{}) ([]byte, error) {
+func (b *Rpdb) GetRange(db uint32, args ...interface{}) ([]byte, error) {
 	if len(args) != 3 {
 		return nil, errArguments("len(args) = %d, expect = 3", len(args))
 	}
@@ -787,7 +787,7 @@ func maxIntValue(v1, v2 int64) int64 {
 }
 
 // STRLEN key
-func (b *Binlog) Strlen(db uint32, args ...interface{}) (int64, error) {
+func (b *Rpdb) Strlen(db uint32, args ...interface{}) (int64, error) {
 	if len(args) != 1 {
 		return 0, errArguments("len(args) = %d, expect = 1", len(args))
 	}

@@ -1,7 +1,7 @@
 // Copyright 2014 Wandoujia Inc. All Rights Reserved.
 // Licensed under the MIT (MIT-LICENSE.txt) license.
 
-package binlog
+package rpdb
 
 import (
 	"bytes"
@@ -42,7 +42,7 @@ func HashKeyToSlot(key []byte) ([]byte, uint32) {
 }
 
 // SLOTSINFO [start] [count]
-func (b *Binlog) SlotsInfo(db uint32, args ...interface{}) (map[uint32]int64, error) {
+func (b *Rpdb) SlotsInfo(db uint32, args ...interface{}) (map[uint32]int64, error) {
 	if len(args) > 2 {
 		return nil, errArguments("len(args) = %d, expect <= 2", len(args))
 	}
@@ -80,7 +80,7 @@ func (b *Binlog) SlotsInfo(db uint32, args ...interface{}) (map[uint32]int64, er
 }
 
 // SLOTSRESTORE key ttlms value [key ttlms value ...]
-func (b *Binlog) SlotsRestore(db uint32, args ...interface{}) error {
+func (b *Rpdb) SlotsRestore(db uint32, args ...interface{}) error {
 	if len(args) == 0 || len(args)%3 != 0 {
 		return errArguments("len(args) = %d, expect != 0 && mod 3 = 0", len(args))
 	}
@@ -140,7 +140,7 @@ func (b *Binlog) SlotsRestore(db uint32, args ...interface{}) error {
 }
 
 // SLOTSMGRTSLOT host port timeout slot
-func (b *Binlog) SlotsMgrtSlot(db uint32, args ...interface{}) (int64, error) {
+func (b *Rpdb) SlotsMgrtSlot(db uint32, args ...interface{}) (int64, error) {
 	if len(args) != 4 {
 		return 0, errArguments("len(args) = %d, expect = 4", len(args))
 	}
@@ -178,7 +178,7 @@ func (b *Binlog) SlotsMgrtSlot(db uint32, args ...interface{}) (int64, error) {
 }
 
 // SLOTSMGRTTAGSLOT host port timeout slot
-func (b *Binlog) SlotsMgrtTagSlot(db uint32, args ...interface{}) (int64, error) {
+func (b *Rpdb) SlotsMgrtTagSlot(db uint32, args ...interface{}) (int64, error) {
 	if len(args) != 4 {
 		return 0, errArguments("len(args) = %d, expect = 4", len(args))
 	}
@@ -221,7 +221,7 @@ func (b *Binlog) SlotsMgrtTagSlot(db uint32, args ...interface{}) (int64, error)
 }
 
 // SLOTSMGRTONE host port timeout key
-func (b *Binlog) SlotsMgrtOne(db uint32, args ...interface{}) (int64, error) {
+func (b *Rpdb) SlotsMgrtOne(db uint32, args ...interface{}) (int64, error) {
 	if len(args) != 4 {
 		return 0, errArguments("len(args) = %d, expect = 4", len(args))
 	}
@@ -252,7 +252,7 @@ func (b *Binlog) SlotsMgrtOne(db uint32, args ...interface{}) (int64, error) {
 }
 
 // SLOTSMGRTTAGONE host port timeout key
-func (b *Binlog) SlotsMgrtTagOne(db uint32, args ...interface{}) (int64, error) {
+func (b *Rpdb) SlotsMgrtTagOne(db uint32, args ...interface{}) (int64, error) {
 	if len(args) != 4 {
 		return 0, errArguments("len(args) = %d, expect = 4", len(args))
 	}
@@ -286,7 +286,7 @@ func (b *Binlog) SlotsMgrtTagOne(db uint32, args ...interface{}) (int64, error) 
 	}
 }
 
-func (b *Binlog) migrateOne(addr string, timeout time.Duration, db uint32, key []byte) (int64, error) {
+func (b *Rpdb) migrateOne(addr string, timeout time.Duration, db uint32, key []byte) (int64, error) {
 	n, err := b.migrate(addr, timeout, db, key)
 	if err != nil {
 		log.ErrorErrorf(err, "migrate one failed")
@@ -295,7 +295,7 @@ func (b *Binlog) migrateOne(addr string, timeout time.Duration, db uint32, key [
 	return n, nil
 }
 
-func (b *Binlog) migrateTag(addr string, timeout time.Duration, db uint32, tag []byte) (int64, error) {
+func (b *Rpdb) migrateTag(addr string, timeout time.Duration, db uint32, tag []byte) (int64, error) {
 	keys, err := allKeysWithTag(b, db, tag)
 	if err != nil || len(keys) == 0 {
 		return 0, err
@@ -308,8 +308,8 @@ func (b *Binlog) migrateTag(addr string, timeout time.Duration, db uint32, tag [
 	return n, nil
 }
 
-func (b *Binlog) migrate(addr string, timeout time.Duration, db uint32, keys ...[]byte) (int64, error) {
-	var rows []binlogRow
+func (b *Rpdb) migrate(addr string, timeout time.Duration, db uint32, keys ...[]byte) (int64, error) {
+	var rows []rpdbRow
 	var bins []*rdb.BinEntry
 
 	for i, key := range keys {

@@ -16,7 +16,7 @@ func (h *Handler) LIndex(arg0 interface{}, args [][]byte) (redis.Resp, error) {
 		return toRespError(err)
 	}
 
-	if v, err := s.Binlog().LIndex(s.DB(), iconvert(args)...); err != nil {
+	if v, err := s.Rpdb().LIndex(s.DB(), iconvert(args)...); err != nil {
 		return toRespError(err)
 	} else {
 		return redis.NewBulkBytes(v), nil
@@ -34,7 +34,7 @@ func (h *Handler) LLen(arg0 interface{}, args [][]byte) (redis.Resp, error) {
 		return toRespError(err)
 	}
 
-	if n, err := s.Binlog().LLen(s.DB(), iconvert(args)...); err != nil {
+	if n, err := s.Rpdb().LLen(s.DB(), iconvert(args)...); err != nil {
 		return toRespError(err)
 	} else {
 		return redis.NewInt(n), nil
@@ -52,7 +52,7 @@ func (h *Handler) LRange(arg0 interface{}, args [][]byte) (redis.Resp, error) {
 		return toRespError(err)
 	}
 
-	if a, err := s.Binlog().LRange(s.DB(), iconvert(args)...); err != nil {
+	if a, err := s.Rpdb().LRange(s.DB(), iconvert(args)...); err != nil {
 		return toRespError(err)
 	} else {
 		resp := redis.NewArray()
@@ -74,7 +74,7 @@ func (h *Handler) LSet(arg0 interface{}, args [][]byte) (redis.Resp, error) {
 		return toRespError(err)
 	}
 
-	if err := s.Binlog().LSet(s.DB(), iconvert(args)...); err != nil {
+	if err := s.Rpdb().LSet(s.DB(), iconvert(args)...); err != nil {
 		return toRespError(err)
 	} else {
 		return redis.NewString("OK"), nil
@@ -92,7 +92,7 @@ func (h *Handler) LTrim(arg0 interface{}, args [][]byte) (redis.Resp, error) {
 		return toRespError(err)
 	}
 
-	if err := s.Binlog().LTrim(s.DB(), iconvert(args)...); err != nil {
+	if err := s.Rpdb().LTrim(s.DB(), iconvert(args)...); err != nil {
 		return toRespError(err)
 	} else {
 		return redis.NewString("OK"), nil
@@ -110,7 +110,7 @@ func (h *Handler) LPop(arg0 interface{}, args [][]byte) (redis.Resp, error) {
 		return toRespError(err)
 	}
 
-	if v, err := s.Binlog().LPop(s.DB(), iconvert(args)...); err != nil {
+	if v, err := s.Rpdb().LPop(s.DB(), iconvert(args)...); err != nil {
 		return toRespError(err)
 	} else {
 		return redis.NewBulkBytes(v), nil
@@ -128,7 +128,7 @@ func (h *Handler) RPop(arg0 interface{}, args [][]byte) (redis.Resp, error) {
 		return toRespError(err)
 	}
 
-	if v, err := s.Binlog().RPop(s.DB(), iconvert(args)...); err != nil {
+	if v, err := s.Rpdb().RPop(s.DB(), iconvert(args)...); err != nil {
 		return toRespError(err)
 	} else {
 		return redis.NewBulkBytes(v), nil
@@ -146,7 +146,7 @@ func (h *Handler) LPush(arg0 interface{}, args [][]byte) (redis.Resp, error) {
 		return toRespError(err)
 	}
 
-	if n, err := s.Binlog().LPush(s.DB(), iconvert(args)...); err != nil {
+	if n, err := s.Rpdb().LPush(s.DB(), iconvert(args)...); err != nil {
 		return toRespError(err)
 	} else {
 		return redis.NewInt(n), nil
@@ -164,7 +164,7 @@ func (h *Handler) LPushX(arg0 interface{}, args [][]byte) (redis.Resp, error) {
 		return toRespError(err)
 	}
 
-	if n, err := s.Binlog().LPushX(s.DB(), iconvert(args)...); err != nil {
+	if n, err := s.Rpdb().LPushX(s.DB(), iconvert(args)...); err != nil {
 		return toRespError(err)
 	} else {
 		return redis.NewInt(n), nil
@@ -182,7 +182,7 @@ func (h *Handler) RPush(arg0 interface{}, args [][]byte) (redis.Resp, error) {
 		return toRespError(err)
 	}
 
-	if n, err := s.Binlog().RPush(s.DB(), iconvert(args)...); err != nil {
+	if n, err := s.Rpdb().RPush(s.DB(), iconvert(args)...); err != nil {
 		return toRespError(err)
 	} else {
 		return redis.NewInt(n), nil
@@ -200,7 +200,7 @@ func (h *Handler) RPushX(arg0 interface{}, args [][]byte) (redis.Resp, error) {
 		return toRespError(err)
 	}
 
-	if n, err := s.Binlog().RPushX(s.DB(), iconvert(args)...); err != nil {
+	if n, err := s.Rpdb().RPushX(s.DB(), iconvert(args)...); err != nil {
 		return toRespError(err)
 	} else {
 		return redis.NewInt(n), nil

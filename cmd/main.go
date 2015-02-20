@@ -13,7 +13,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/docopt/docopt-go"
-	"github.com/wandoulabs/rpdb/pkg/binlog"
+	"github.com/wandoulabs/rpdb/pkg/rpdb"
 	"github.com/wandoulabs/rpdb/pkg/service"
 	"github.com/wandoulabs/rpdb/pkg/store"
 	"github.com/wandoulabs/rpdb/pkg/store/leveldb"
@@ -115,7 +115,7 @@ Options:
 		log.PanicErrorf(err, "open database failed")
 	}
 
-	bl := binlog.New(db)
+	bl := rpdb.New(db)
 	defer bl.Close()
 
 	if args.repair {

@@ -1,7 +1,7 @@
 // Copyright 2014 Wandoujia Inc. All Rights Reserved.
 // Licensed under the MIT (MIT-LICENSE.txt) license.
 
-package binlog
+package rpdb
 
 import (
 	"bytes"
@@ -12,7 +12,7 @@ import (
 )
 
 type setRow struct {
-	*binlogRowHelper
+	*rpdbRowHelper
 
 	Size   int64
 	Member []byte
@@ -20,18 +20,18 @@ type setRow struct {
 
 func newSetRow(db uint32, key []byte) *setRow {
 	o := &setRow{}
-	o.lazyInit(newBinlogRowHelper(db, key, SetCode))
+	o.lazyInit(newRpdbRowHelper(db, key, SetCode))
 	return o
 }
 
-func (o *setRow) lazyInit(h *binlogRowHelper) {
-	o.binlogRowHelper = h
+func (o *setRow) lazyInit(h *rpdbRowHelper) {
+	o.rpdbRowHelper = h
 	o.dataKeyRefs = []interface{}{&o.Member}
 	o.metaValueRefs = []interface{}{&o.Size}
 	o.dataValueRefs = nil
 }
 
-func (o *setRow) deleteObject(b *Binlog, bt *store.Batch) error {
+func (o *setRow) deleteObject(b *Rpdb, bt *store.Batch) error {
 	it := b.getIterator()
 	defer b.putIterator(it)
 	for pfx := it.SeekTo(o.DataKeyPrefix()); it.Valid(); it.Next() {
@@ -45,7 +45,7 @@ func (o *setRow) deleteObject(b *Binlog, bt *store.Batch) error {
 	return it.Error()
 }
 
-func (o *setRow) storeObject(b *Binlog, bt *store.Batch, expireat uint64, obj interface{}) error {
+func (o *setRow) storeObject(b *Rpdb, bt *store.Batch, expireat uint64, obj interface{}) error {
 	set, ok := obj.(rdb.Set)
 	if !ok || len(set) == 0 {
 		return errors.Trace(ErrObjectValue)
@@ -67,7 +67,7 @@ func (o *setRow) storeObject(b *Binlog, bt *store.Batch, expireat uint64, obj in
 	return nil
 }
 
-func (o *setRow) loadObjectValue(r binlogReader) (interface{}, error) {
+func (o *setRow) loadObjectValue(r rpdbReader) (interface{}, error) {
 	it := r.getIterator()
 	defer r.putIterator(it)
 	set := make([][]byte, 0, o.Size)
@@ -94,7 +94,7 @@ func (o *setRow) loadObjectValue(r binlogReader) (interface{}, error) {
 	return rdb.Set(set), nil
 }
 
-func (o *setRow) getMembers(r binlogReader, count int64) ([][]byte, error) {
+func (o *setRow) getMembers(r rpdbReader, count int64) ([][]byte, error) {
 	it := r.getIterator()
 	defer r.putIterator(it)
 	var members [][]byte
@@ -125,8 +125,8 @@ func (o *setRow) getMembers(r binlogReader, count int64) ([][]byte, error) {
 	return members, nil
 }
 
-func (b *Binlog) loadSetRow(db uint32, key []byte, deleteIfExpired bool) (*setRow, error) {
-	o, err := b.loadBinlogRow(db, key, deleteIfExpired)
+func (b *Rpdb) loadSetRow(db uint32, key []byte, deleteIfExpired bool) (*setRow, error) {
+	o, err := b.loadRpdbRow(db, key, deleteIfExpired)
 	if err != nil {
 		return nil, err
 	} else if o != nil {
@@ -140,7 +140,7 @@ func (b *Binlog) loadSetRow(db uint32, key []byte, deleteIfExpired bool) (*setRo
 }
 
 // SADD key member [member ...]
-func (b *Binlog) SAdd(db uint32, args ...interface{}) (int64, error) {
+func (b *Rpdb) SAdd(db uint32, args ...interface{}) (int64, error) {
 	if len(args) < 2 {
 		return 0, errArguments("len(args) = %d, expect >= 2", len(args))
 	}
@@ -193,7 +193,7 @@ func (b *Binlog) SAdd(db uint32, args ...interface{}) (int64, error) {
 }
 
 // SCARD key
-func (b *Binlog) SCard(db uint32, args ...interface{}) (int64, error) {
+func (b *Rpdb) SCard(db uint32, args ...interface{}) (int64, error) {
 	if len(args) != 1 {
 		return 0, errArguments("len(args) = %d, expect = 1", len(args))
 	}
@@ -218,7 +218,7 @@ func (b *Binlog) SCard(db uint32, args ...interface{}) (int64, error) {
 }
 
 // SISMEMBER key member
-func (b *Binlog) SIsMember(db uint32, args ...interface{}) (int64, error) {
+func (b *Rpdb) SIsMember(db uint32, args ...interface{}) (int64, error) {
 	if len(args) != 2 {
 		return 0, errArguments("len(args) = %d, expect = 2", len(args))
 	}
@@ -250,7 +250,7 @@ func (b *Binlog) SIsMember(db uint32, args ...interface{}) (int64, error) {
 }
 
 // SMEMBERS key
-func (b *Binlog) SMembers(db uint32, args ...interface{}) ([][]byte, error) {
+func (b *Rpdb) SMembers(db uint32, args ...interface{}) ([][]byte, error) {
 	if len(args) != 1 {
 		return nil, errArguments("len(args) = %d, expect = 1", len(args))
 	}
@@ -276,7 +276,7 @@ func (b *Binlog) SMembers(db uint32, args ...interface{}) ([][]byte, error) {
 }
 
 // SPOP key
-func (b *Binlog) SPop(db uint32, args ...interface{}) ([]byte, error) {
+func (b *Rpdb) SPop(db uint32, args ...interface{}) ([]byte, error) {
 	if len(args) != 1 {
 		return nil, errArguments("len(args) = %d, expect = 1", len(args))
 	}
@@ -316,7 +316,7 @@ func (b *Binlog) SPop(db uint32, args ...interface{}) ([]byte, error) {
 }
 
 // SRANDMEMBER key [count]
-func (b *Binlog) SRandMember(db uint32, args ...interface{}) ([][]byte, error) {
+func (b *Rpdb) SRandMember(db uint32, args ...interface{}) ([][]byte, error) {
 	if len(args) != 1 && len(args) != 2 {
 		return nil, errArguments("len(args) = %d, expect = 1 or 2", len(args))
 	}
@@ -353,7 +353,7 @@ func (b *Binlog) SRandMember(db uint32, args ...interface{}) ([][]byte, error) {
 }
 
 // SREM key member [member ...]
-func (b *Binlog) SRem(db uint32, args ...interface{}) (int64, error) {
+func (b *Rpdb) SRem(db uint32, args ...interface{}) (int64, error) {
 	if len(args) < 2 {
 		return 0, errArguments("len(args) = %d, expect >= 2", len(args))
 	}

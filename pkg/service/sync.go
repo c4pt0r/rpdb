@@ -15,7 +15,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/wandoulabs/rpdb/pkg/binlog"
+	"github.com/wandoulabs/rpdb/pkg/rpdb"
 	"github.com/wandoulabs/redis-port/pkg/libs/counter"
 	"github.com/wandoulabs/redis-port/pkg/libs/errors"
 	"github.com/wandoulabs/redis-port/pkg/libs/io/ioutils"
@@ -43,11 +43,11 @@ func (h *Handler) Bgsave(arg0 interface{}, args [][]byte) (redis.Resp, error) {
 		return toRespErrorf("bgsave is busy: %d, should be 1")
 	}
 
-	sp, err := s.Binlog().NewSnapshot()
+	sp, err := s.Rpdb().NewSnapshot()
 	if err != nil {
 		return toRespError(err)
 	}
-	defer s.Binlog().ReleaseSnapshot(sp)
+	defer s.Rpdb().ReleaseSnapshot(sp)
 
 	if err := h.bgsaveTo(sp, h.config.DumpPath); err != nil {
 		return toRespError(err)
@@ -74,11 +74,11 @@ func (h *Handler) BgsaveTo(arg0 interface{}, args [][]byte) (redis.Resp, error) 
 		return toRespErrorf("bgsave is busy: %d, should be 1", bg)
 	}
 
-	sp, err := s.Binlog().NewSnapshot()
+	sp, err := s.Rpdb().NewSnapshot()
 	if err != nil {
 		return toRespError(err)
 	}
-	defer s.Binlog().ReleaseSnapshot(sp)
+	defer s.Rpdb().ReleaseSnapshot(sp)
 
 	if err := h.bgsaveTo(sp, string(args[0])); err != nil {
 		return toRespError(err)
@@ -87,7 +87,7 @@ func (h *Handler) BgsaveTo(arg0 interface{}, args [][]byte) (redis.Resp, error) 
 	}
 }
 
-func (h *Handler) bgsaveTo(sp *binlog.BinlogSnapshot, path string) error {
+func (h *Handler) bgsaveTo(sp *rpdb.RpdbSnapshot, path string) error {
 	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0600)
 	if err != nil {
 		return errors.Trace(err)
@@ -148,7 +148,7 @@ func (h *Handler) SlaveOf(arg0 interface{}, args [][]byte) (redis.Resp, error) {
 		if nc, err := net.DialTimeout("tcp", addr, time.Second); err != nil {
 			return toRespError(errors.Trace(err))
 		} else {
-			c = newConn(nc, s.Binlog(), 0)
+			c = newConn(nc, s.Rpdb(), 0)
 			if err := c.ping(); err != nil {
 				c.Close()
 				return toRespError(err)
@@ -279,7 +279,7 @@ func (h *Handler) doSyncTo(c *conn) error {
 
 	c.w = bufio.NewWriter(ioutil.Discard)
 
-	if err := c.Binlog().Reset(); err != nil {
+	if err := c.Rpdb().Reset(); err != nil {
 		return err
 	}
 
@@ -332,13 +332,13 @@ func (h *Handler) doSyncRDB(c *conn, size int64) error {
 				db, key, value := entry.DB, entry.Key, entry.Value
 				ttlms := int64(0)
 				if entry.ExpireAt != 0 {
-					if v, ok := binlog.ExpireAtToTTLms(entry.ExpireAt); ok && v > 0 {
+					if v, ok := rpdb.ExpireAtToTTLms(entry.ExpireAt); ok && v > 0 {
 						ttlms = v
 					} else {
 						ttlms = 1
 					}
 				}
-				if err := c.Binlog().SlotsRestore(db, key, ttlms, value); err != nil {
+				if err := c.Rpdb().SlotsRestore(db, key, ttlms, value); err != nil {
 					errs <- err
 					return
 				}

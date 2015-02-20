@@ -6,7 +6,7 @@ package service
 import (
 	"math"
 
-	"github.com/wandoulabs/rpdb/pkg/binlog"
+	"github.com/wandoulabs/rpdb/pkg/rpdb"
 	"github.com/wandoulabs/redis-port/pkg/rdb"
 	"github.com/wandoulabs/redis-port/pkg/redis"
 )
@@ -22,7 +22,7 @@ func (h *Handler) Select(arg0 interface{}, args [][]byte) (redis.Resp, error) {
 		return toRespError(err)
 	}
 
-	if db, err := binlog.ParseUint(args[0]); err != nil {
+	if db, err := rpdb.ParseUint(args[0]); err != nil {
 		return toRespError(err)
 	} else if db > math.MaxUint32 {
 		return toRespErrorf("parse db = %d", db)
@@ -43,7 +43,7 @@ func (h *Handler) Del(arg0 interface{}, args [][]byte) (redis.Resp, error) {
 		return toRespError(err)
 	}
 
-	if n, err := s.Binlog().Del(s.DB(), iconvert(args)...); err != nil {
+	if n, err := s.Rpdb().Del(s.DB(), iconvert(args)...); err != nil {
 		return toRespError(err)
 	} else {
 		return redis.NewInt(n), nil
@@ -61,7 +61,7 @@ func (h *Handler) Dump(arg0 interface{}, args [][]byte) (redis.Resp, error) {
 		return toRespError(err)
 	}
 
-	if x, err := s.Binlog().Dump(s.DB(), iconvert(args)...); err != nil {
+	if x, err := s.Rpdb().Dump(s.DB(), iconvert(args)...); err != nil {
 		return toRespError(err)
 	} else if dump, err := rdb.EncodeDump(x); err != nil {
 		return toRespError(err)
@@ -81,7 +81,7 @@ func (h *Handler) Type(arg0 interface{}, args [][]byte) (redis.Resp, error) {
 		return toRespError(err)
 	}
 
-	if c, err := s.Binlog().Type(s.DB(), iconvert(args)...); err != nil {
+	if c, err := s.Rpdb().Type(s.DB(), iconvert(args)...); err != nil {
 		return toRespError(err)
 	} else {
 		return redis.NewString(c.String()), nil
@@ -99,7 +99,7 @@ func (h *Handler) Exists(arg0 interface{}, args [][]byte) (redis.Resp, error) {
 		return toRespError(err)
 	}
 
-	if x, err := s.Binlog().Exists(s.DB(), iconvert(args)...); err != nil {
+	if x, err := s.Rpdb().Exists(s.DB(), iconvert(args)...); err != nil {
 		return toRespError(err)
 	} else {
 		return redis.NewInt(x), nil
@@ -117,7 +117,7 @@ func (h *Handler) TTL(arg0 interface{}, args [][]byte) (redis.Resp, error) {
 		return toRespError(err)
 	}
 
-	if x, err := s.Binlog().TTL(s.DB(), iconvert(args)...); err != nil {
+	if x, err := s.Rpdb().TTL(s.DB(), iconvert(args)...); err != nil {
 		return toRespError(err)
 	} else {
 		return redis.NewInt(x), nil
@@ -135,7 +135,7 @@ func (h *Handler) PTTL(arg0 interface{}, args [][]byte) (redis.Resp, error) {
 		return toRespError(err)
 	}
 
-	if x, err := s.Binlog().PTTL(s.DB(), iconvert(args)...); err != nil {
+	if x, err := s.Rpdb().PTTL(s.DB(), iconvert(args)...); err != nil {
 		return toRespError(err)
 	} else {
 		return redis.NewInt(x), nil
@@ -153,7 +153,7 @@ func (h *Handler) Persist(arg0 interface{}, args [][]byte) (redis.Resp, error) {
 		return toRespError(err)
 	}
 
-	if x, err := s.Binlog().Persist(s.DB(), iconvert(args)...); err != nil {
+	if x, err := s.Rpdb().Persist(s.DB(), iconvert(args)...); err != nil {
 		return toRespError(err)
 	} else {
 		return redis.NewInt(x), nil
@@ -171,7 +171,7 @@ func (h *Handler) Expire(arg0 interface{}, args [][]byte) (redis.Resp, error) {
 		return toRespError(err)
 	}
 
-	if x, err := s.Binlog().Expire(s.DB(), iconvert(args)...); err != nil {
+	if x, err := s.Rpdb().Expire(s.DB(), iconvert(args)...); err != nil {
 		return toRespError(err)
 	} else {
 		return redis.NewInt(x), nil
@@ -189,7 +189,7 @@ func (h *Handler) PExpire(arg0 interface{}, args [][]byte) (redis.Resp, error) {
 		return toRespError(err)
 	}
 
-	if x, err := s.Binlog().PExpire(s.DB(), iconvert(args)...); err != nil {
+	if x, err := s.Rpdb().PExpire(s.DB(), iconvert(args)...); err != nil {
 		return toRespError(err)
 	} else {
 		return redis.NewInt(x), nil
@@ -207,7 +207,7 @@ func (h *Handler) ExpireAt(arg0 interface{}, args [][]byte) (redis.Resp, error) 
 		return toRespError(err)
 	}
 
-	if x, err := s.Binlog().ExpireAt(s.DB(), iconvert(args)...); err != nil {
+	if x, err := s.Rpdb().ExpireAt(s.DB(), iconvert(args)...); err != nil {
 		return toRespError(err)
 	} else {
 		return redis.NewInt(x), nil
@@ -225,7 +225,7 @@ func (h *Handler) PExpireAt(arg0 interface{}, args [][]byte) (redis.Resp, error)
 		return toRespError(err)
 	}
 
-	if x, err := s.Binlog().PExpireAt(s.DB(), iconvert(args)...); err != nil {
+	if x, err := s.Rpdb().PExpireAt(s.DB(), iconvert(args)...); err != nil {
 		return toRespError(err)
 	} else {
 		return redis.NewInt(x), nil
@@ -243,7 +243,7 @@ func (h *Handler) Restore(arg0 interface{}, args [][]byte) (redis.Resp, error) {
 		return toRespError(err)
 	}
 
-	if err := s.Binlog().Restore(s.DB(), iconvert(args)...); err != nil {
+	if err := s.Rpdb().Restore(s.DB(), iconvert(args)...); err != nil {
 		return toRespError(err)
 	} else {
 		return redis.NewString("OK"), nil

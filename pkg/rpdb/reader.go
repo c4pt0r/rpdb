@@ -1,7 +1,7 @@
 // Copyright 2014 Wandoujia Inc. All Rights Reserved.
 // Licensed under the MIT (MIT-LICENSE.txt) license.
 
-package binlog
+package rpdb
 
 import (
 	"bytes"
@@ -10,19 +10,19 @@ import (
 	"github.com/wandoulabs/redis-port/pkg/rdb"
 )
 
-type binlogIterator struct {
+type rpdbIterator struct {
 	store.Iterator
 	serial uint64
 }
 
-type binlogReader interface {
+type rpdbReader interface {
 	getRowValue(key []byte) ([]byte, error)
-	getIterator() *binlogIterator
-	putIterator(it *binlogIterator)
+	getIterator() *rpdbIterator
+	putIterator(it *rpdbIterator)
 }
 
-func loadObjEntry(r binlogReader, db uint32, key []byte) (binlogRow, *rdb.ObjEntry, error) {
-	o, err := loadBinlogRow(r, db, key)
+func loadObjEntry(r rpdbReader, db uint32, key []byte) (rpdbRow, *rdb.ObjEntry, error) {
+	o, err := loadRpdbRow(r, db, key)
 	if err != nil || o == nil {
 		return o, nil, err
 	}
@@ -42,7 +42,7 @@ func loadObjEntry(r binlogReader, db uint32, key []byte) (binlogRow, *rdb.ObjEnt
 	}
 }
 
-func loadBinEntry(r binlogReader, db uint32, key []byte) (binlogRow, *rdb.BinEntry, error) {
+func loadBinEntry(r rpdbReader, db uint32, key []byte) (rpdbRow, *rdb.BinEntry, error) {
 	o, obj, err := loadObjEntry(r, db, key)
 	if err != nil || obj == nil {
 		return o, nil, err
@@ -54,7 +54,7 @@ func loadBinEntry(r binlogReader, db uint32, key []byte) (binlogRow, *rdb.BinEnt
 	}
 }
 
-func firstKeyUnderSlot(r binlogReader, db uint32, slot uint32) ([]byte, error) {
+func firstKeyUnderSlot(r rpdbReader, db uint32, slot uint32) ([]byte, error) {
 	it := r.getIterator()
 	defer r.putIterator(it)
 	pfx := EncodeMetaKeyPrefixSlot(db, slot)
@@ -72,7 +72,7 @@ func firstKeyUnderSlot(r binlogReader, db uint32, slot uint32) ([]byte, error) {
 	return nil, it.Error()
 }
 
-func allKeysWithTag(r binlogReader, db uint32, tag []byte) ([][]byte, error) {
+func allKeysWithTag(r rpdbReader, db uint32, tag []byte) ([][]byte, error) {
 	it := r.getIterator()
 	defer r.putIterator(it)
 	var keys [][]byte

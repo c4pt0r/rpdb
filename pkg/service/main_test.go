@@ -12,7 +12,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/wandoulabs/rpdb/pkg/binlog"
+	"github.com/wandoulabs/rpdb/pkg/rpdb"
 	"github.com/wandoulabs/rpdb/pkg/store/rocksdb"
 	"github.com/wandoulabs/redis-port/pkg/libs/log"
 	"github.com/wandoulabs/redis-port/pkg/libs/testing/assert"
@@ -20,7 +20,7 @@ import (
 )
 
 var (
-	testbl *binlog.Binlog
+	testbl *rpdb.Rpdb
 	server = redis.MustServer(&Handler{})
 	keymap = make(map[string]bool)
 )
@@ -37,7 +37,7 @@ func (s *fakeSession) SetDB(db uint32) {
 	s.db = db
 }
 
-func (s *fakeSession) Binlog() *binlog.Binlog {
+func (s *fakeSession) Rpdb() *rpdb.Rpdb {
 	return testbl
 }
 
@@ -54,7 +54,7 @@ func reinit() {
 		if testdb, err := rocksdb.Open(path, conf, true, false); err != nil {
 			log.PanicError(err, "open rocksdb failed")
 		} else {
-			testbl = binlog.New(testdb)
+			testbl = rpdb.New(testdb)
 		}
 	}
 }

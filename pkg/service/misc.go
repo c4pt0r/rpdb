@@ -49,7 +49,7 @@ func (h *Handler) Reset(arg0 interface{}, args [][]byte) (redis.Resp, error) {
 		return toRespError(err)
 	}
 
-	if err := s.Binlog().Reset(); err != nil {
+	if err := s.Rpdb().Reset(); err != nil {
 		return toRespError(err)
 	} else {
 		return redis.NewString("OK"), nil
@@ -67,7 +67,7 @@ func (h *Handler) CompactAll(arg0 interface{}, args [][]byte) (redis.Resp, error
 		return toRespError(err)
 	}
 
-	if err := s.Binlog().CompactAll(); err != nil {
+	if err := s.Rpdb().CompactAll(); err != nil {
 		return toRespError(err)
 	} else {
 		return redis.NewString("OK"), nil
@@ -85,7 +85,7 @@ func (h *Handler) Shutdown(arg0 interface{}, args [][]byte) (redis.Resp, error) 
 		return toRespError(err)
 	}
 
-	s.Binlog().Close()
+	s.Rpdb().Close()
 	os.Exit(0)
 	return nil, nil
 }
@@ -102,7 +102,7 @@ func (h *Handler) Info(arg0 interface{}, args [][]byte) (redis.Resp, error) {
 	}
 
 	var b bytes.Buffer
-	if v, err := s.Binlog().Info(); err != nil {
+	if v, err := s.Rpdb().Info(); err != nil {
 		return toRespError(err)
 	} else {
 		fmt.Fprintf(&b, "# Database\n")

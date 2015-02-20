@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/wandoulabs/rpdb/pkg/binlog"
+	"github.com/wandoulabs/rpdb/pkg/rpdb"
 	"github.com/wandoulabs/redis-port/pkg/rdb"
 )
 
@@ -45,6 +45,6 @@ func TestBgsaveTo(t *testing.T) {
 		checkerror(t, err, true)
 		x, ok := o.(rdb.String)
 		checkerror(t, nil, ok)
-		checkerror(t, nil, string(x) == string(binlog.FormatInt(int64(i))))
+		checkerror(t, nil, string(x) == string(rpdb.FormatInt(int64(i))))
 	}
 }

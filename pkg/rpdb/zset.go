@@ -1,7 +1,7 @@
 // Copyright 2014 Wandoujia Inc. All Rights Reserved.
 // Licensed under the MIT (MIT-LICENSE.txt) license.
 
-package binlog
+package rpdb
 
 import (
 	"bytes"
@@ -12,7 +12,7 @@ import (
 )
 
 type zsetRow struct {
-	*binlogRowHelper
+	*rpdbRowHelper
 
 	Size   int64
 	Member []byte
@@ -21,18 +21,18 @@ type zsetRow struct {
 
 func newZSetRow(db uint32, key []byte) *zsetRow {
 	o := &zsetRow{}
-	o.lazyInit(newBinlogRowHelper(db, key, ZSetCode))
+	o.lazyInit(newRpdbRowHelper(db, key, ZSetCode))
 	return o
 }
 
-func (o *zsetRow) lazyInit(h *binlogRowHelper) {
-	o.binlogRowHelper = h
+func (o *zsetRow) lazyInit(h *rpdbRowHelper) {
+	o.rpdbRowHelper = h
 	o.dataKeyRefs = []interface{}{&o.Member}
 	o.metaValueRefs = []interface{}{&o.Size}
 	o.dataValueRefs = []interface{}{&o.Score}
 }
 
-func (o *zsetRow) deleteObject(b *Binlog, bt *store.Batch) error {
+func (o *zsetRow) deleteObject(b *Rpdb, bt *store.Batch) error {
 	it := b.getIterator()
 	defer b.putIterator(it)
 	for pfx := it.SeekTo(o.DataKeyPrefix()); it.Valid(); it.Next() {
@@ -46,7 +46,7 @@ func (o *zsetRow) deleteObject(b *Binlog, bt *store.Batch) error {
 	return it.Error()
 }
 
-func (o *zsetRow) storeObject(b *Binlog, bt *store.Batch, expireat uint64, obj interface{}) error {
+func (o *zsetRow) storeObject(b *Rpdb, bt *store.Batch, expireat uint64, obj interface{}) error {
 	zset, ok := obj.(rdb.ZSet)
 	if !ok || len(zset) == 0 {
 		return errors.Trace(ErrObjectValue)
@@ -71,7 +71,7 @@ func (o *zsetRow) storeObject(b *Binlog, bt *store.Batch, expireat uint64, obj i
 	return nil
 }
 
-func (o *zsetRow) loadObjectValue(r binlogReader) (interface{}, error) {
+func (o *zsetRow) loadObjectValue(r rpdbReader) (interface{}, error) {
 	zset := make([]*rdb.ZSetElement, 0, o.Size)
 	it := r.getIterator()
 	defer r.putIterator(it)
@@ -98,8 +98,8 @@ func (o *zsetRow) loadObjectValue(r binlogReader) (interface{}, error) {
 	return rdb.ZSet(zset), nil
 }
 
-func (b *Binlog) loadZSetRow(db uint32, key []byte, deleteIfExpired bool) (*zsetRow, error) {
-	o, err := b.loadBinlogRow(db, key, deleteIfExpired)
+func (b *Rpdb) loadZSetRow(db uint32, key []byte, deleteIfExpired bool) (*zsetRow, error) {
+	o, err := b.loadRpdbRow(db, key, deleteIfExpired)
 	if err != nil {
 		return nil, err
 	} else if o != nil {
@@ -113,7 +113,7 @@ func (b *Binlog) loadZSetRow(db uint32, key []byte, deleteIfExpired bool) (*zset
 }
 
 // ZGETALL key
-func (b *Binlog) ZGetAll(db uint32, args ...interface{}) ([][]byte, error) {
+func (b *Rpdb) ZGetAll(db uint32, args ...interface{}) ([][]byte, error) {
 	if len(args) != 1 {
 		return nil, errArguments("len(args) = %d, expect = 1", len(args))
 	}
@@ -149,7 +149,7 @@ func (b *Binlog) ZGetAll(db uint32, args ...interface{}) ([][]byte, error) {
 }
 
 // ZCARD key
-func (b *Binlog) ZCard(db uint32, args ...interface{}) (int64, error) {
+func (b *Rpdb) ZCard(db uint32, args ...interface{}) (int64, error) {
 	if len(args) != 1 {
 		return 0, errArguments("len(args) = %d, expect = 1", len(args))
 	}
@@ -174,7 +174,7 @@ func (b *Binlog) ZCard(db uint32, args ...interface{}) (int64, error) {
 }
 
 // ZADD key score member [score member ...]
-func (b *Binlog) ZAdd(db uint32, args ...interface{}) (int64, error) {
+func (b *Rpdb) ZAdd(db uint32, args ...interface{}) (int64, error) {
 	if len(args) == 1 || len(args)%2 != 1 {
 		return 0, errArguments("len(args) = %d, expect != 1 && mod 2 = 1", len(args))
 	}
@@ -233,7 +233,7 @@ func (b *Binlog) ZAdd(db uint32, args ...interface{}) (int64, error) {
 }
 
 // ZREM key member [member ...]
-func (b *Binlog) ZRem(db uint32, args ...interface{}) (int64, error) {
+func (b *Rpdb) ZRem(db uint32, args ...interface{}) (int64, error) {
 	if len(args) < 2 {
 		return 0, errArguments("len(args) = %d, expect >= 2", len(args))
 	}
@@ -287,7 +287,7 @@ func (b *Binlog) ZRem(db uint32, args ...interface{}) (int64, error) {
 }
 
 // ZSCORE key member
-func (b *Binlog) ZScore(db uint32, args ...interface{}) (float64, bool, error) {
+func (b *Rpdb) ZScore(db uint32, args ...interface{}) (float64, bool, error) {
 	if len(args) != 2 {
 		return 0, false, errArguments("len(args) = %d, expect = 2", len(args))
 	}
@@ -319,7 +319,7 @@ func (b *Binlog) ZScore(db uint32, args ...interface{}) (float64, bool, error) {
 }
 
 // ZINCRBY key delta member
-func (b *Binlog) ZIncrBy(db uint32, args ...interface{}) (float64, error) {
+func (b *Rpdb) ZIncrBy(db uint32, args ...interface{}) (float64, error) {
 	if len(args) != 3 {
 		return 0, errArguments("len(args) = %d, expect = 2", len(args))
 	}

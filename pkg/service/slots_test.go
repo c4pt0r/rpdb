@@ -9,14 +9,14 @@ import (
 	"os"
 	"testing"
 
-	"github.com/wandoulabs/rpdb/pkg/binlog"
+	"github.com/wandoulabs/rpdb/pkg/rpdb"
 	"github.com/wandoulabs/rpdb/pkg/store/rocksdb"
 	"github.com/wandoulabs/redis-port/pkg/libs/log"
 	"github.com/wandoulabs/redis-port/pkg/redis"
 )
 
 var (
-	testbl2 *binlog.Binlog
+	testbl2 *rpdb.Rpdb
 	port    int
 )
 
@@ -32,7 +32,7 @@ func (s *fakeSession2) SetDB(db uint32) {
 	s.db = db
 }
 
-func (s *fakeSession2) Binlog() *binlog.Binlog {
+func (s *fakeSession2) Rpdb() *rpdb.Rpdb {
 	return testbl2
 }
 
@@ -45,7 +45,7 @@ func init() {
 		if testdb, err := rocksdb.Open(path, conf, true, false); err != nil {
 			log.PanicError(err, "open rocksdb failed")
 		} else {
-			testbl2 = binlog.New(testdb)
+			testbl2 = rpdb.New(testdb)
 		}
 	}
 	l, err := net.Listen("tcp", ":0")

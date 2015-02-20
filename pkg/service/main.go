@@ -7,14 +7,14 @@ import (
 	"io"
 	"net"
 
-	"github.com/wandoulabs/rpdb/pkg/binlog"
+	"github.com/wandoulabs/rpdb/pkg/rpdb"
 	"github.com/wandoulabs/redis-port/pkg/libs/counter"
 	"github.com/wandoulabs/redis-port/pkg/libs/errors"
 	"github.com/wandoulabs/redis-port/pkg/libs/log"
 	"github.com/wandoulabs/redis-port/pkg/redis"
 )
 
-func Serve(config *Config, bl *binlog.Binlog) error {
+func Serve(config *Config, bl *rpdb.Rpdb) error {
 	h := &Handler{
 		config: config,
 		master: make(chan *conn, 0),
@@ -66,7 +66,7 @@ func Serve(config *Config, bl *binlog.Binlog) error {
 type Session interface {
 	DB() uint32
 	SetDB(db uint32)
-	Binlog() *binlog.Binlog
+	Rpdb() *rpdb.Rpdb
 }
 
 type Handler struct {

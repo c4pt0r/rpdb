@@ -1,7 +1,7 @@
 // Copyright 2014 Wandoujia Inc. All Rights Reserved.
 // Licensed under the MIT (MIT-LICENSE.txt) license.
 
-package binlog
+package rpdb
 
 import (
 	"container/list"
@@ -13,10 +13,10 @@ import (
 )
 
 var (
-	ErrClosed = errors.Static("binlog has been closed")
+	ErrClosed = errors.Static("rpdb has been closed")
 )
 
-type Binlog struct {
+type Rpdb struct {
 	mu sync.Mutex
 	db store.Database
 
@@ -25,11 +25,11 @@ type Binlog struct {
 	serial uint64
 }
 
-func New(db store.Database) *Binlog {
-	return &Binlog{db: db}
+func New(db store.Database) *Rpdb {
+	return &Rpdb{db: db}
 }
 
-func (b *Binlog) acquire() error {
+func (b *Rpdb) acquire() error {
 	b.mu.Lock()
 	if b.db != nil {
 		return nil
@@ -38,41 +38,41 @@ func (b *Binlog) acquire() error {
 	return errors.Trace(ErrClosed)
 }
 
-func (b *Binlog) release() {
+func (b *Rpdb) release() {
 	b.mu.Unlock()
 }
 
-func (b *Binlog) commit(bt *store.Batch, fw *Forward) error {
+func (b *Rpdb) commit(bt *store.Batch, fw *Forward) error {
 	if bt.Len() == 0 {
 		return nil
 	}
 	if err := b.db.Commit(bt); err != nil {
-		log.WarnErrorf(err, "binlog commit failed")
+		log.WarnErrorf(err, "rpdb commit failed")
 		return err
 	}
 	for i := b.itlist.Len(); i != 0; i-- {
-		v := b.itlist.Remove(b.itlist.Front()).(*binlogIterator)
+		v := b.itlist.Remove(b.itlist.Front()).(*rpdbIterator)
 		v.Close()
 	}
 	b.serial++
 	return nil
 }
 
-func (b *Binlog) getRowValue(key []byte) ([]byte, error) {
+func (b *Rpdb) getRowValue(key []byte) ([]byte, error) {
 	return b.db.Get(key)
 }
 
-func (b *Binlog) getIterator() (it *binlogIterator) {
+func (b *Rpdb) getIterator() (it *rpdbIterator) {
 	if e := b.itlist.Front(); e != nil {
-		return b.itlist.Remove(e).(*binlogIterator)
+		return b.itlist.Remove(e).(*rpdbIterator)
 	}
-	return &binlogIterator{
+	return &rpdbIterator{
 		Iterator: b.db.NewIterator(),
 		serial:   b.serial,
 	}
 }
 
-func (b *Binlog) putIterator(it *binlogIterator) {
+func (b *Rpdb) putIterator(it *rpdbIterator) {
 	if it.serial == b.serial && it.Error() == nil {
 		b.itlist.PushFront(it)
 	} else {
@@ -80,46 +80,46 @@ func (b *Binlog) putIterator(it *binlogIterator) {
 	}
 }
 
-func (b *Binlog) Close() {
+func (b *Rpdb) Close() {
 	if err := b.acquire(); err != nil {
 		return
 	}
 	defer b.release()
-	log.Infof("binlog is closing ...")
+	log.Infof("rpdb is closing ...")
 	for i := b.splist.Len(); i != 0; i-- {
-		v := b.splist.Remove(b.splist.Front()).(*BinlogSnapshot)
+		v := b.splist.Remove(b.splist.Front()).(*RpdbSnapshot)
 		v.Close()
 	}
 	for i := b.itlist.Len(); i != 0; i-- {
-		v := b.itlist.Remove(b.itlist.Front()).(*binlogIterator)
+		v := b.itlist.Remove(b.itlist.Front()).(*rpdbIterator)
 		v.Close()
 	}
 	if b.db != nil {
 		b.db.Close()
 		b.db = nil
 	}
-	log.Infof("binlog is closed")
+	log.Infof("rpdb is closed")
 }
 
-func (b *Binlog) NewSnapshot() (*BinlogSnapshot, error) {
+func (b *Rpdb) NewSnapshot() (*RpdbSnapshot, error) {
 	if err := b.acquire(); err != nil {
 		return nil, err
 	}
 	defer b.release()
-	sp := &BinlogSnapshot{sp: b.db.NewSnapshot()}
+	sp := &RpdbSnapshot{sp: b.db.NewSnapshot()}
 	b.splist.PushBack(sp)
-	log.Infof("binlog create new snapshot, address = %p", sp)
+	log.Infof("rpdb create new snapshot, address = %p", sp)
 	return sp, nil
 }
 
-func (b *Binlog) ReleaseSnapshot(sp *BinlogSnapshot) {
+func (b *Rpdb) ReleaseSnapshot(sp *RpdbSnapshot) {
 	if err := b.acquire(); err != nil {
 		return
 	}
 	defer b.release()
-	log.Infof("binlog release snapshot, address = %p", sp)
+	log.Infof("rpdb release snapshot, address = %p", sp)
 	for i := b.splist.Len(); i != 0; i-- {
-		v := b.splist.Remove(b.splist.Front()).(*BinlogSnapshot)
+		v := b.splist.Remove(b.splist.Front()).(*RpdbSnapshot)
 		if v != sp {
 			b.splist.PushBack(v)
 		}
@@ -127,35 +127,35 @@ func (b *Binlog) ReleaseSnapshot(sp *BinlogSnapshot) {
 	sp.Close()
 }
 
-func (b *Binlog) Reset() error {
+func (b *Rpdb) Reset() error {
 	if err := b.acquire(); err != nil {
 		return err
 	}
 	defer b.release()
-	log.Infof("binlog is reseting...")
+	log.Infof("rpdb is reseting...")
 	for i := b.splist.Len(); i != 0; i-- {
-		v := b.splist.Remove(b.splist.Front()).(*BinlogSnapshot)
+		v := b.splist.Remove(b.splist.Front()).(*RpdbSnapshot)
 		v.Close()
 	}
 	for i := b.itlist.Len(); i != 0; i-- {
-		v := b.itlist.Remove(b.itlist.Front()).(*binlogIterator)
+		v := b.itlist.Remove(b.itlist.Front()).(*rpdbIterator)
 		v.Close()
 	}
 	if err := b.db.Clear(); err != nil {
 		b.db.Close()
 		b.db = nil
-		log.ErrorErrorf(err, "binlog reset failed")
+		log.ErrorErrorf(err, "rpdb reset failed")
 		return err
 	} else {
 		b.serial++
-		log.Infof("binlog is reset")
+		log.Infof("rpdb is reset")
 		return nil
 	}
 }
 
-func (b *Binlog) compact(start, limit []byte) error {
+func (b *Rpdb) compact(start, limit []byte) error {
 	if err := b.db.Compact(start, limit); err != nil {
-		log.ErrorErrorf(err, "binlog compact failed")
+		log.ErrorErrorf(err, "rpdb compact failed")
 		return err
 	} else {
 		return nil
@@ -164,6 +164,6 @@ func (b *Binlog) compact(start, limit []byte) error {
 
 func errArguments(format string, v ...interface{}) error {
 	err := errors.Errorf(format, v...)
-	log.DebugErrorf(err, "call binlog function with invalid arguments")
+	log.DebugErrorf(err, "call rpdb function with invalid arguments")
 	return err
 }

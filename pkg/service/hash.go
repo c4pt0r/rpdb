@@ -4,7 +4,7 @@
 package service
 
 import (
-	"github.com/wandoulabs/rpdb/pkg/binlog"
+	"github.com/wandoulabs/rpdb/pkg/rpdb"
 	"github.com/wandoulabs/redis-port/pkg/redis"
 )
 
@@ -19,7 +19,7 @@ func (h *Handler) HGetAll(arg0 interface{}, args [][]byte) (redis.Resp, error) {
 		return toRespError(err)
 	}
 
-	if a, err := s.Binlog().HGetAll(s.DB(), iconvert(args)...); err != nil {
+	if a, err := s.Rpdb().HGetAll(s.DB(), iconvert(args)...); err != nil {
 		return toRespError(err)
 	} else {
 		resp := redis.NewArray()
@@ -41,7 +41,7 @@ func (h *Handler) HDel(arg0 interface{}, args [][]byte) (redis.Resp, error) {
 		return toRespError(err)
 	}
 
-	if n, err := s.Binlog().HDel(s.DB(), iconvert(args)...); err != nil {
+	if n, err := s.Rpdb().HDel(s.DB(), iconvert(args)...); err != nil {
 		return toRespError(err)
 	} else {
 		return redis.NewInt(n), nil
@@ -59,7 +59,7 @@ func (h *Handler) HExists(arg0 interface{}, args [][]byte) (redis.Resp, error) {
 		return toRespError(err)
 	}
 
-	if x, err := s.Binlog().HExists(s.DB(), iconvert(args)...); err != nil {
+	if x, err := s.Rpdb().HExists(s.DB(), iconvert(args)...); err != nil {
 		return toRespError(err)
 	} else {
 		return redis.NewInt(x), nil
@@ -77,7 +77,7 @@ func (h *Handler) HGet(arg0 interface{}, args [][]byte) (redis.Resp, error) {
 		return toRespError(err)
 	}
 
-	if b, err := s.Binlog().HGet(s.DB(), iconvert(args)...); err != nil {
+	if b, err := s.Rpdb().HGet(s.DB(), iconvert(args)...); err != nil {
 		return toRespError(err)
 	} else {
 		return redis.NewBulkBytes(b), nil
@@ -95,7 +95,7 @@ func (h *Handler) HLen(arg0 interface{}, args [][]byte) (redis.Resp, error) {
 		return toRespError(err)
 	}
 
-	if n, err := s.Binlog().HLen(s.DB(), iconvert(args)...); err != nil {
+	if n, err := s.Rpdb().HLen(s.DB(), iconvert(args)...); err != nil {
 		return toRespError(err)
 	} else {
 		return redis.NewInt(n), nil
@@ -113,7 +113,7 @@ func (h *Handler) HIncrBy(arg0 interface{}, args [][]byte) (redis.Resp, error) {
 		return toRespError(err)
 	}
 
-	if v, err := s.Binlog().HIncrBy(s.DB(), iconvert(args)...); err != nil {
+	if v, err := s.Rpdb().HIncrBy(s.DB(), iconvert(args)...); err != nil {
 		return toRespError(err)
 	} else {
 		return redis.NewInt(v), nil
@@ -131,10 +131,10 @@ func (h *Handler) HIncrByFloat(arg0 interface{}, args [][]byte) (redis.Resp, err
 		return toRespError(err)
 	}
 
-	if v, err := s.Binlog().HIncrByFloat(s.DB(), iconvert(args)...); err != nil {
+	if v, err := s.Rpdb().HIncrByFloat(s.DB(), iconvert(args)...); err != nil {
 		return toRespError(err)
 	} else {
-		return redis.NewString(binlog.FormatFloatString(v)), nil
+		return redis.NewString(rpdb.FormatFloatString(v)), nil
 	}
 }
 
@@ -149,7 +149,7 @@ func (h *Handler) HKeys(arg0 interface{}, args [][]byte) (redis.Resp, error) {
 		return toRespError(err)
 	}
 
-	if a, err := s.Binlog().HKeys(s.DB(), iconvert(args)...); err != nil {
+	if a, err := s.Rpdb().HKeys(s.DB(), iconvert(args)...); err != nil {
 		return toRespError(err)
 	} else {
 		resp := redis.NewArray()
@@ -171,7 +171,7 @@ func (h *Handler) HVals(arg0 interface{}, args [][]byte) (redis.Resp, error) {
 		return toRespError(err)
 	}
 
-	if a, err := s.Binlog().HVals(s.DB(), iconvert(args)...); err != nil {
+	if a, err := s.Rpdb().HVals(s.DB(), iconvert(args)...); err != nil {
 		return toRespError(err)
 	} else {
 		resp := redis.NewArray()
@@ -193,7 +193,7 @@ func (h *Handler) HSet(arg0 interface{}, args [][]byte) (redis.Resp, error) {
 		return toRespError(err)
 	}
 
-	if x, err := s.Binlog().HSet(s.DB(), iconvert(args)...); err != nil {
+	if x, err := s.Rpdb().HSet(s.DB(), iconvert(args)...); err != nil {
 		return toRespError(err)
 	} else {
 		return redis.NewInt(x), nil
@@ -211,7 +211,7 @@ func (h *Handler) HSetNX(arg0 interface{}, args [][]byte) (redis.Resp, error) {
 		return toRespError(err)
 	}
 
-	if x, err := s.Binlog().HSetNX(s.DB(), iconvert(args)...); err != nil {
+	if x, err := s.Rpdb().HSetNX(s.DB(), iconvert(args)...); err != nil {
 		return toRespError(err)
 	} else {
 		return redis.NewInt(x), nil
@@ -229,7 +229,7 @@ func (h *Handler) HMSet(arg0 interface{}, args [][]byte) (redis.Resp, error) {
 		return toRespError(err)
 	}
 
-	if err := s.Binlog().HMSet(s.DB(), iconvert(args)...); err != nil {
+	if err := s.Rpdb().HMSet(s.DB(), iconvert(args)...); err != nil {
 		return toRespError(err)
 	} else {
 		return redis.NewString("OK"), nil
@@ -247,7 +247,7 @@ func (h *Handler) HMGet(arg0 interface{}, args [][]byte) (redis.Resp, error) {
 		return toRespError(err)
 	}
 
-	if a, err := s.Binlog().HMGet(s.DB(), iconvert(args)...); err != nil {
+	if a, err := s.Rpdb().HMGet(s.DB(), iconvert(args)...); err != nil {
 		return toRespError(err)
 	} else {
 		resp := redis.NewArray()

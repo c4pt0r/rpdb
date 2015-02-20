@@ -4,7 +4,7 @@
 package service
 
 import (
-	"github.com/wandoulabs/rpdb/pkg/binlog"
+	"github.com/wandoulabs/rpdb/pkg/rpdb"
 	"github.com/wandoulabs/redis-port/pkg/redis"
 )
 
@@ -19,7 +19,7 @@ func (h *Handler) ZGetAll(arg0 interface{}, args [][]byte) (redis.Resp, error) {
 		return toRespError(err)
 	}
 
-	if a, err := s.Binlog().ZGetAll(s.DB(), iconvert(args)...); err != nil {
+	if a, err := s.Rpdb().ZGetAll(s.DB(), iconvert(args)...); err != nil {
 		return toRespError(err)
 	} else {
 		resp := redis.NewArray()
@@ -41,7 +41,7 @@ func (h *Handler) ZCard(arg0 interface{}, args [][]byte) (redis.Resp, error) {
 		return toRespError(err)
 	}
 
-	if n, err := s.Binlog().ZCard(s.DB(), iconvert(args)...); err != nil {
+	if n, err := s.Rpdb().ZCard(s.DB(), iconvert(args)...); err != nil {
 		return toRespError(err)
 	} else {
 		return redis.NewInt(n), nil
@@ -59,7 +59,7 @@ func (h *Handler) ZAdd(arg0 interface{}, args [][]byte) (redis.Resp, error) {
 		return toRespError(err)
 	}
 
-	if n, err := s.Binlog().ZAdd(s.DB(), iconvert(args)...); err != nil {
+	if n, err := s.Rpdb().ZAdd(s.DB(), iconvert(args)...); err != nil {
 		return toRespError(err)
 	} else {
 		return redis.NewInt(n), nil
@@ -77,7 +77,7 @@ func (h *Handler) ZRem(arg0 interface{}, args [][]byte) (redis.Resp, error) {
 		return toRespError(err)
 	}
 
-	if n, err := s.Binlog().ZRem(s.DB(), iconvert(args)...); err != nil {
+	if n, err := s.Rpdb().ZRem(s.DB(), iconvert(args)...); err != nil {
 		return toRespError(err)
 	} else {
 		return redis.NewInt(n), nil
@@ -95,12 +95,12 @@ func (h *Handler) ZScore(arg0 interface{}, args [][]byte) (redis.Resp, error) {
 		return toRespError(err)
 	}
 
-	if v, ok, err := s.Binlog().ZScore(s.DB(), iconvert(args)...); err != nil {
+	if v, ok, err := s.Rpdb().ZScore(s.DB(), iconvert(args)...); err != nil {
 		return toRespError(err)
 	} else if !ok {
 		return redis.NewBulkBytes(nil), nil
 	} else {
-		return redis.NewString(binlog.FormatFloatString(v)), nil
+		return redis.NewString(rpdb.FormatFloatString(v)), nil
 	}
 }
 
@@ -115,9 +115,9 @@ func (h *Handler) ZIncrBy(arg0 interface{}, args [][]byte) (redis.Resp, error) {
 		return toRespError(err)
 	}
 
-	if v, err := s.Binlog().ZIncrBy(s.DB(), iconvert(args)...); err != nil {
+	if v, err := s.Rpdb().ZIncrBy(s.DB(), iconvert(args)...); err != nil {
 		return toRespError(err)
 	} else {
-		return redis.NewString(binlog.FormatFloatString(v)), nil
+		return redis.NewString(rpdb.FormatFloatString(v)), nil
 	}
 }

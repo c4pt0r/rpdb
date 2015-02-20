@@ -1,7 +1,7 @@
 // Copyright 2014 Wandoujia Inc. All Rights Reserved.
 // Licensed under the MIT (MIT-LICENSE.txt) license.
 
-package binlog
+package rpdb
 
 import (
 	"math"
@@ -256,5 +256,5 @@ func TestRestore(t *testing.T) {
 
 /*
 // TODO
-func (b *Binlog) Restore(db uint32, args ...interface{}) error {
+func (b *Rpdb) Restore(db uint32, args ...interface{}) error {
 */

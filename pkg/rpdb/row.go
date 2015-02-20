@@ -1,7 +1,7 @@
 // Copyright 2014 Wandoujia Inc. All Rights Reserved.
 // Licensed under the MIT (MIT-LICENSE.txt) license.
 
-package binlog
+package rpdb
 
 import (
 	"fmt"
@@ -80,7 +80,7 @@ func EncodeDataKeyPrefix(db uint32, key []byte) []byte {
 	return w.Bytes()
 }
 
-type binlogRow interface {
+type rpdbRow interface {
 	Code() ObjectCode
 
 	MetaKey() []byte
@@ -91,20 +91,20 @@ type binlogRow interface {
 	DataValue() []byte
 	ParseDataValue(p []byte) error
 
-	LoadDataValue(r binlogReader) (bool, error)
-	TestDataValue(r binlogReader) (bool, error)
+	LoadDataValue(r rpdbReader) (bool, error)
+	TestDataValue(r rpdbReader) (bool, error)
 
 	GetExpireAt() uint64
 	SetExpireAt(expireat uint64)
 	IsExpired() bool
 
-	lazyInit(h *binlogRowHelper)
-	storeObject(b *Binlog, bt *store.Batch, expireat uint64, obj interface{}) error
-	deleteObject(b *Binlog, bt *store.Batch) error
-	loadObjectValue(r binlogReader) (interface{}, error)
+	lazyInit(h *rpdbRowHelper)
+	storeObject(b *Rpdb, bt *store.Batch, expireat uint64, obj interface{}) error
+	deleteObject(b *Rpdb, bt *store.Batch) error
+	loadObjectValue(r rpdbReader) (interface{}, error)
 }
 
-type binlogRowHelper struct {
+type rpdbRowHelper struct {
 	code          ObjectCode
 	metaKey       []byte
 	dataKeyPrefix []byte
@@ -116,7 +116,7 @@ type binlogRowHelper struct {
 	dataValueRefs []interface{}
 }
 
-func loadBinlogRow(r binlogReader, db uint32, key []byte) (binlogRow, error) {
+func loadRpdbRow(r rpdbReader, db uint32, key []byte) (rpdbRow, error) {
 	metaKey := EncodeMetaKey(db, key)
 	p, err := r.getRowValue(metaKey)
 	if err != nil || p == nil {
@@ -125,7 +125,7 @@ func loadBinlogRow(r binlogReader, db uint32, key []byte) (binlogRow, error) {
 	if len(p) == 0 {
 		return nil, errors.Trace(ErrObjectCode)
 	}
-	var o binlogRow
+	var o rpdbRow
 	var code = ObjectCode(p[0])
 	switch code {
 	default:
@@ -141,7 +141,7 @@ func loadBinlogRow(r binlogReader, db uint32, key []byte) (binlogRow, error) {
 	case SetCode:
 		o = new(setRow)
 	}
-	o.lazyInit(&binlogRowHelper{
+	o.lazyInit(&rpdbRowHelper{
 		code:          code,
 		metaKey:       metaKey,
 		dataKeyPrefix: EncodeDataKeyPrefix(db, key),
@@ -149,30 +149,30 @@ func loadBinlogRow(r binlogReader, db uint32, key []byte) (binlogRow, error) {
 	return o, o.ParseMetaValue(p)
 }
 
-func newBinlogRowHelper(db uint32, key []byte, code ObjectCode) *binlogRowHelper {
-	return &binlogRowHelper{
+func newRpdbRowHelper(db uint32, key []byte, code ObjectCode) *rpdbRowHelper {
+	return &rpdbRowHelper{
 		code:          code,
 		metaKey:       EncodeMetaKey(db, key),
 		dataKeyPrefix: EncodeDataKeyPrefix(db, key),
 	}
 }
 
-func (o *binlogRowHelper) Code() ObjectCode {
+func (o *rpdbRowHelper) Code() ObjectCode {
 	return o.code
 }
 
-func (o *binlogRowHelper) MetaKey() []byte {
+func (o *rpdbRowHelper) MetaKey() []byte {
 	return o.metaKey
 }
 
-func (o *binlogRowHelper) MetaValue() []byte {
+func (o *rpdbRowHelper) MetaValue() []byte {
 	w := NewBufWriter(nil)
 	encodeRawBytes(w, o.code, &o.ExpireAt)
 	encodeRawBytes(w, o.metaValueRefs...)
 	return w.Bytes()
 }
 
-func (o *binlogRowHelper) ParseMetaValue(p []byte) (err error) {
+func (o *rpdbRowHelper) ParseMetaValue(p []byte) (err error) {
 	r := NewBufReader(p)
 	err = decodeRawBytes(r, err, o.code, &o.ExpireAt)
 	err = decodeRawBytes(r, err, o.metaValueRefs...)
@@ -180,7 +180,7 @@ func (o *binlogRowHelper) ParseMetaValue(p []byte) (err error) {
 	return
 }
 
-func (o *binlogRowHelper) DataKey() []byte {
+func (o *rpdbRowHelper) DataKey() []byte {
 	if len(o.dataKeyRefs) != 0 {
 		w := NewBufWriter(o.DataKeyPrefix())
 		encodeRawBytes(w, o.dataKeyRefs...)
@@ -190,25 +190,25 @@ func (o *binlogRowHelper) DataKey() []byte {
 	}
 }
 
-func (o *binlogRowHelper) DataKeyPrefix() []byte {
+func (o *rpdbRowHelper) DataKeyPrefix() []byte {
 	return o.dataKeyPrefix
 }
 
-func (o *binlogRowHelper) ParseDataKeySuffix(p []byte) (err error) {
+func (o *rpdbRowHelper) ParseDataKeySuffix(p []byte) (err error) {
 	r := NewBufReader(p)
 	err = decodeRawBytes(r, err, o.dataKeyRefs...)
 	err = decodeRawBytes(r, err)
 	return
 }
 
-func (o *binlogRowHelper) DataValue() []byte {
+func (o *rpdbRowHelper) DataValue() []byte {
 	w := NewBufWriter(nil)
 	encodeRawBytes(w, o.code)
 	encodeRawBytes(w, o.dataValueRefs...)
 	return w.Bytes()
 }
 
-func (o *binlogRowHelper) ParseDataValue(p []byte) (err error) {
+func (o *rpdbRowHelper) ParseDataValue(p []byte) (err error) {
 	r := NewBufReader(p)
 	err = decodeRawBytes(r, err, o.code)
 	err = decodeRawBytes(r, err, o.dataValueRefs...)
@@ -216,7 +216,7 @@ func (o *binlogRowHelper) ParseDataValue(p []byte) (err error) {
 	return
 }
 
-func (o *binlogRowHelper) LoadDataValue(r binlogReader) (bool, error) {
+func (o *rpdbRowHelper) LoadDataValue(r rpdbReader) (bool, error) {
 	p, err := r.getRowValue(o.DataKey())
 	if err != nil || p == nil {
 		return false, err
@@ -224,7 +224,7 @@ func (o *binlogRowHelper) LoadDataValue(r binlogReader) (bool, error) {
 	return true, o.ParseDataValue(p)
 }
 
-func (o *binlogRowHelper) TestDataValue(r binlogReader) (bool, error) {
+func (o *rpdbRowHelper) TestDataValue(r rpdbReader) (bool, error) {
 	p, err := r.getRowValue(o.DataKey())
 	if err != nil || p == nil {
 		return false, err
@@ -232,15 +232,15 @@ func (o *binlogRowHelper) TestDataValue(r binlogReader) (bool, error) {
 	return true, nil
 }
 
-func (o *binlogRowHelper) GetExpireAt() uint64 {
+func (o *rpdbRowHelper) GetExpireAt() uint64 {
 	return o.ExpireAt
 }
 
-func (o *binlogRowHelper) SetExpireAt(expireat uint64) {
+func (o *rpdbRowHelper) SetExpireAt(expireat uint64) {
 	o.ExpireAt = expireat
 }
 
-func (o *binlogRowHelper) IsExpired() bool {
+func (o *rpdbRowHelper) IsExpired() bool {
 	return IsExpired(o.ExpireAt)
 }
 

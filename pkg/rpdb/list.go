@@ -1,7 +1,7 @@
 // Copyright 2014 Wandoujia Inc. All Rights Reserved.
 // Licensed under the MIT (MIT-LICENSE.txt) license.
 
-package binlog
+package rpdb
 
 import (
 	"bytes"
@@ -17,7 +17,7 @@ var (
 )
 
 type listRow struct {
-	*binlogRowHelper
+	*rpdbRowHelper
 
 	Lindex int64
 	Rindex int64
@@ -27,18 +27,18 @@ type listRow struct {
 
 func newListRow(db uint32, key []byte) *listRow {
 	o := &listRow{}
-	o.lazyInit(newBinlogRowHelper(db, key, ListCode))
+	o.lazyInit(newRpdbRowHelper(db, key, ListCode))
 	return o
 }
 
-func (o *listRow) lazyInit(h *binlogRowHelper) {
-	o.binlogRowHelper = h
+func (o *listRow) lazyInit(h *rpdbRowHelper) {
+	o.rpdbRowHelper = h
 	o.dataKeyRefs = []interface{}{&o.Index}
 	o.metaValueRefs = []interface{}{&o.Lindex, &o.Rindex}
 	o.dataValueRefs = []interface{}{&o.Value}
 }
 
-func (o *listRow) deleteObject(b *Binlog, bt *store.Batch) error {
+func (o *listRow) deleteObject(b *Rpdb, bt *store.Batch) error {
 	it := b.getIterator()
 	defer b.putIterator(it)
 	for pfx := it.SeekTo(o.DataKeyPrefix()); it.Valid(); it.Next() {
@@ -52,7 +52,7 @@ func (o *listRow) deleteObject(b *Binlog, bt *store.Batch) error {
 	return it.Error()
 }
 
-func (o *listRow) storeObject(b *Binlog, bt *store.Batch, expireat uint64, obj interface{}) error {
+func (o *listRow) storeObject(b *Rpdb, bt *store.Batch, expireat uint64, obj interface{}) error {
 	list, ok := obj.(rdb.List)
 	if !ok || len(list) == 0 {
 		return errors.Trace(ErrObjectValue)
@@ -74,7 +74,7 @@ func (o *listRow) storeObject(b *Binlog, bt *store.Batch, expireat uint64, obj i
 	return nil
 }
 
-func (o *listRow) loadObjectValue(r binlogReader) (interface{}, error) {
+func (o *listRow) loadObjectValue(r rpdbReader) (interface{}, error) {
 	list := make([][]byte, 0, int(o.Rindex-o.Lindex))
 	for o.Index = o.Lindex; o.Index < o.Rindex; o.Index++ {
 		_, err := o.LoadDataValue(r)
@@ -86,8 +86,8 @@ func (o *listRow) loadObjectValue(r binlogReader) (interface{}, error) {
 	return rdb.List(list), nil
 }
 
-func (b *Binlog) loadListRow(db uint32, key []byte, deleteIfExpired bool) (*listRow, error) {
-	o, err := b.loadBinlogRow(db, key, deleteIfExpired)
+func (b *Rpdb) loadListRow(db uint32, key []byte, deleteIfExpired bool) (*listRow, error) {
+	o, err := b.loadRpdbRow(db, key, deleteIfExpired)
 	if err != nil {
 		return nil, err
 	} else if o != nil {
@@ -101,7 +101,7 @@ func (b *Binlog) loadListRow(db uint32, key []byte, deleteIfExpired bool) (*list
 }
 
 // LINDEX key index
-func (b *Binlog) LIndex(db uint32, args ...interface{}) ([]byte, error) {
+func (b *Rpdb) LIndex(db uint32, args ...interface{}) ([]byte, error) {
 	if len(args) != 2 {
 		return nil, errArguments("len(args) = %d, expect = 2", len(args))
 	}
@@ -132,7 +132,7 @@ func (b *Binlog) LIndex(db uint32, args ...interface{}) ([]byte, error) {
 }
 
 // LLEN key
-func (b *Binlog) LLen(db uint32, args ...interface{}) (int64, error) {
+func (b *Rpdb) LLen(db uint32, args ...interface{}) (int64, error) {
 	if len(args) != 1 {
 		return 0, errArguments("len(args) = %d, expect = 1", len(args))
 	}
@@ -157,7 +157,7 @@ func (b *Binlog) LLen(db uint32, args ...interface{}) (int64, error) {
 }
 
 // LRANGE key beg end
-func (b *Binlog) LRange(db uint32, args ...interface{}) ([][]byte, error) {
+func (b *Rpdb) LRange(db uint32, args ...interface{}) ([][]byte, error) {
 	if len(args) != 3 {
 		return nil, errArguments("len(args) = %d, expect = 2", len(args))
 	}
@@ -198,7 +198,7 @@ func (b *Binlog) LRange(db uint32, args ...interface{}) ([][]byte, error) {
 }
 
 // LSET key index value
-func (b *Binlog) LSet(db uint32, args ...interface{}) error {
+func (b *Rpdb) LSet(db uint32, args ...interface{}) error {
 	if len(args) != 3 {
 		return errArguments("len(args) = %d, expect = 2", len(args))
 	}
@@ -238,7 +238,7 @@ func (b *Binlog) LSet(db uint32, args ...interface{}) error {
 }
 
 // LTRIM key beg end
-func (b *Binlog) LTrim(db uint32, args ...interface{}) error {
+func (b *Rpdb) LTrim(db uint32, args ...interface{}) error {
 	if len(args) != 3 {
 		return errArguments("len(args) = %d, expect = 2", len(args))
 	}
@@ -288,7 +288,7 @@ func (b *Binlog) LTrim(db uint32, args ...interface{}) error {
 }
 
 // LPOP key
-func (b *Binlog) LPop(db uint32, args ...interface{}) ([]byte, error) {
+func (b *Rpdb) LPop(db uint32, args ...interface{}) ([]byte, error) {
 	if len(args) != 1 {
 		return nil, errArguments("len(args) = %d, expect = 1", len(args))
 	}
@@ -327,7 +327,7 @@ func (b *Binlog) LPop(db uint32, args ...interface{}) ([]byte, error) {
 }
 
 // RPOP key
-func (b *Binlog) RPop(db uint32, args ...interface{}) ([]byte, error) {
+func (b *Rpdb) RPop(db uint32, args ...interface{}) ([]byte, error) {
 	if len(args) != 1 {
 		return nil, errArguments("len(args) = %d, expect = 1", len(args))
 	}
@@ -366,7 +366,7 @@ func (b *Binlog) RPop(db uint32, args ...interface{}) ([]byte, error) {
 }
 
 // LPUSH key value [value ...]
-func (b *Binlog) LPush(db uint32, args ...interface{}) (int64, error) {
+func (b *Rpdb) LPush(db uint32, args ...interface{}) (int64, error) {
 	if len(args) < 2 {
 		return 0, errArguments("len(args) = %d, expect >= 2", len(args))
 	}
@@ -391,7 +391,7 @@ func (b *Binlog) LPush(db uint32, args ...interface{}) (int64, error) {
 }
 
 // LPUSHX key value
-func (b *Binlog) LPushX(db uint32, args ...interface{}) (int64, error) {
+func (b *Rpdb) LPushX(db uint32, args ...interface{}) (int64, error) {
 	if len(args) != 2 {
 		return 0, errArguments("len(args) = %d, expect = 2", len(args))
 	}
@@ -412,7 +412,7 @@ func (b *Binlog) LPushX(db uint32, args ...interface{}) (int64, error) {
 }
 
 // RPUSH key value [value ...]
-func (b *Binlog) RPush(db uint32, args ...interface{}) (int64, error) {
+func (b *Rpdb) RPush(db uint32, args ...interface{}) (int64, error) {
 	if len(args) < 2 {
 		return 0, errArguments("len(args) = %d, expect >= 2", len(args))
 	}
@@ -437,7 +437,7 @@ func (b *Binlog) RPush(db uint32, args ...interface{}) (int64, error) {
 }
 
 // RPUSHX key value
-func (b *Binlog) RPushX(db uint32, args ...interface{}) (int64, error) {
+func (b *Rpdb) RPushX(db uint32, args ...interface{}) (int64, error) {
 	if len(args) != 2 {
 		return 0, errArguments("len(args) = %d, expect = 2", len(args))
 	}
@@ -457,7 +457,7 @@ func (b *Binlog) RPushX(db uint32, args ...interface{}) (int64, error) {
 	return b.rpush(db, key, false, value)
 }
 
-func (b *Binlog) lpush(db uint32, key []byte, create bool, values ...[]byte) (int64, error) {
+func (b *Rpdb) lpush(db uint32, key []byte, create bool, values ...[]byte) (int64, error) {
 	o, err := b.loadListRow(db, key, true)
 	if err != nil {
 		return 0, err
@@ -482,7 +482,7 @@ func (b *Binlog) lpush(db uint32, key []byte, create bool, values ...[]byte) (in
 	return o.Rindex - o.Lindex, b.commit(bt, fw)
 }
 
-func (b *Binlog) rpush(db uint32, key []byte, create bool, values ...[]byte) (int64, error) {
+func (b *Rpdb) rpush(db uint32, key []byte, create bool, values ...[]byte) (int64, error) {
 	o, err := b.loadListRow(db, key, true)
 	if err != nil {
 		return 0, err

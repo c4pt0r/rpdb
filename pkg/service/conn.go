@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/wandoulabs/rpdb/pkg/binlog"
+	"github.com/wandoulabs/rpdb/pkg/rpdb"
 	"github.com/wandoulabs/redis-port/pkg/libs/errors"
 	"github.com/wandoulabs/redis-port/pkg/libs/log"
 	"github.com/wandoulabs/redis-port/pkg/redis"
@@ -24,13 +24,13 @@ type conn struct {
 
 	db uint32
 	nc net.Conn
-	bl *binlog.Binlog
+	bl *rpdb.Rpdb
 
 	summ    string
 	timeout time.Duration
 }
 
-func newConn(nc net.Conn, bl *binlog.Binlog, timeout int) *conn {
+func newConn(nc net.Conn, bl *rpdb.Rpdb, timeout int) *conn {
 	c := &conn{
 		nc: nc,
 		bl: bl,
@@ -173,6 +173,6 @@ func (c *conn) SetDB(db uint32) {
 	c.db = db
 }
 
-func (c *conn) Binlog() *binlog.Binlog {
+func (c *conn) Rpdb() *rpdb.Rpdb {
 	return c.bl
 }

@@ -1,7 +1,7 @@
 // Copyright 2014 Wandoujia Inc. All Rights Reserved.
 // Licensed under the MIT (MIT-LICENSE.txt) license.
 
-package binlog
+package rpdb
 
 import (
 	"bytes"
@@ -12,7 +12,7 @@ import (
 )
 
 type hashRow struct {
-	*binlogRowHelper
+	*rpdbRowHelper
 
 	Size  int64
 	Field []byte
@@ -21,18 +21,18 @@ type hashRow struct {
 
 func newHashRow(db uint32, key []byte) *hashRow {
 	o := &hashRow{}
-	o.lazyInit(newBinlogRowHelper(db, key, HashCode))
+	o.lazyInit(newRpdbRowHelper(db, key, HashCode))
 	return o
 }
 
-func (o *hashRow) lazyInit(h *binlogRowHelper) {
-	o.binlogRowHelper = h
+func (o *hashRow) lazyInit(h *rpdbRowHelper) {
+	o.rpdbRowHelper = h
 	o.dataKeyRefs = []interface{}{&o.Field}
 	o.metaValueRefs = []interface{}{&o.Size}
 	o.dataValueRefs = []interface{}{&o.Value}
 }
 
-func (o *hashRow) deleteObject(b *Binlog, bt *store.Batch) error {
+func (o *hashRow) deleteObject(b *Rpdb, bt *store.Batch) error {
 	it := b.getIterator()
 	defer b.putIterator(it)
 	for pfx := it.SeekTo(o.DataKeyPrefix()); it.Valid(); it.Next() {
@@ -46,7 +46,7 @@ func (o *hashRow) deleteObject(b *Binlog, bt *store.Batch) error {
 	return it.Error()
 }
 
-func (o *hashRow) storeObject(b *Binlog, bt *store.Batch, expireat uint64, obj interface{}) error {
+func (o *hashRow) storeObject(b *Rpdb, bt *store.Batch, expireat uint64, obj interface{}) error {
 	hash, ok := obj.(rdb.Hash)
 	if !ok || len(hash) == 0 {
 		return errors.Trace(ErrObjectValue)
@@ -71,7 +71,7 @@ func (o *hashRow) storeObject(b *Binlog, bt *store.Batch, expireat uint64, obj i
 	return nil
 }
 
-func (o *hashRow) loadObjectValue(r binlogReader) (interface{}, error) {
+func (o *hashRow) loadObjectValue(r rpdbReader) (interface{}, error) {
 	it := r.getIterator()
 	defer r.putIterator(it)
 	hash := make([]*rdb.HashElement, 0, o.Size)
@@ -98,7 +98,7 @@ func (o *hashRow) loadObjectValue(r binlogReader) (interface{}, error) {
 	return rdb.Hash(hash), nil
 }
 
-func (o *hashRow) getAllFields(r binlogReader) ([][]byte, error) {
+func (o *hashRow) getAllFields(r rpdbReader) ([][]byte, error) {
 	it := r.getIterator()
 	defer r.putIterator(it)
 	var fields [][]byte
@@ -125,7 +125,7 @@ func (o *hashRow) getAllFields(r binlogReader) ([][]byte, error) {
 	return fields, nil
 }
 
-func (o *hashRow) getAllValues(r binlogReader) ([][]byte, error) {
+func (o *hashRow) getAllValues(r rpdbReader) ([][]byte, error) {
 	it := r.getIterator()
 	defer r.putIterator(it)
 	var values [][]byte
@@ -151,8 +151,8 @@ func (o *hashRow) getAllValues(r binlogReader) ([][]byte, error) {
 	return values, nil
 }
 
-func (b *Binlog) loadHashRow(db uint32, key []byte, deleteIfExpired bool) (*hashRow, error) {
-	o, err := b.loadBinlogRow(db, key, deleteIfExpired)
+func (b *Rpdb) loadHashRow(db uint32, key []byte, deleteIfExpired bool) (*hashRow, error) {
+	o, err := b.loadRpdbRow(db, key, deleteIfExpired)
 	if err != nil {
 		return nil, err
 	} else if o != nil {
@@ -166,7 +166,7 @@ func (b *Binlog) loadHashRow(db uint32, key []byte, deleteIfExpired bool) (*hash
 }
 
 // HGETALL key
-func (b *Binlog) HGetAll(db uint32, args ...interface{}) ([][]byte, error) {
+func (b *Rpdb) HGetAll(db uint32, args ...interface{}) ([][]byte, error) {
 	if len(args) != 1 {
 		return nil, errArguments("len(args) = %d, expect = 1", len(args))
 	}
@@ -202,7 +202,7 @@ func (b *Binlog) HGetAll(db uint32, args ...interface{}) ([][]byte, error) {
 }
 
 // HDEL key field [field ...]
-func (b *Binlog) HDel(db uint32, args ...interface{}) (int64, error) {
+func (b *Rpdb) HDel(db uint32, args ...interface{}) (int64, error) {
 	if len(args) < 2 {
 		return 0, errArguments("len(args) = %d, expect >= 2", len(args))
 	}
@@ -256,7 +256,7 @@ func (b *Binlog) HDel(db uint32, args ...interface{}) (int64, error) {
 }
 
 // HEXISTS key field
-func (b *Binlog) HExists(db uint32, args ...interface{}) (int64, error) {
+func (b *Rpdb) HExists(db uint32, args ...interface{}) (int64, error) {
 	if len(args) != 2 {
 		return 0, errArguments("len(args) = %d, expect = 2", len(args))
 	}
@@ -288,7 +288,7 @@ func (b *Binlog) HExists(db uint32, args ...interface{}) (int64, error) {
 }
 
 // HGET key field
-func (b *Binlog) HGet(db uint32, args ...interface{}) ([]byte, error) {
+func (b *Rpdb) HGet(db uint32, args ...interface{}) ([]byte, error) {
 	if len(args) != 2 {
 		return nil, errArguments("len(args) = %d, expect = 2", len(args))
 	}
@@ -320,7 +320,7 @@ func (b *Binlog) HGet(db uint32, args ...interface{}) ([]byte, error) {
 }
 
 // HLEN key
-func (b *Binlog) HLen(db uint32, args ...interface{}) (int64, error) {
+func (b *Rpdb) HLen(db uint32, args ...interface{}) (int64, error) {
 	if len(args) != 1 {
 		return 0, errArguments("len(args) = %d, expect = 1", len(args))
 	}
@@ -345,7 +345,7 @@ func (b *Binlog) HLen(db uint32, args ...interface{}) (int64, error) {
 }
 
 // HINCRBY key field delta
-func (b *Binlog) HIncrBy(db uint32, args ...interface{}) (int64, error) {
+func (b *Rpdb) HIncrBy(db uint32, args ...interface{}) (int64, error) {
 	if len(args) != 3 {
 		return 0, errArguments("len(args) = %d, expect = 2", len(args))
 	}
@@ -398,7 +398,7 @@ func (b *Binlog) HIncrBy(db uint32, args ...interface{}) (int64, error) {
 }
 
 // HINCRBYFLOAT key field delta
-func (b *Binlog) HIncrByFloat(db uint32, args ...interface{}) (float64, error) {
+func (b *Rpdb) HIncrByFloat(db uint32, args ...interface{}) (float64, error) {
 	if len(args) != 3 {
 		return 0, errArguments("len(args) = %d, expect = 2", len(args))
 	}
@@ -451,7 +451,7 @@ func (b *Binlog) HIncrByFloat(db uint32, args ...interface{}) (float64, error) {
 }
 
 // HKEYS key
-func (b *Binlog) HKeys(db uint32, args ...interface{}) ([][]byte, error) {
+func (b *Rpdb) HKeys(db uint32, args ...interface{}) ([][]byte, error) {
 	if len(args) != 1 {
 		return nil, errArguments("len(args) = %d, expect = 1", len(args))
 	}
@@ -476,7 +476,7 @@ func (b *Binlog) HKeys(db uint32, args ...interface{}) ([][]byte, error) {
 }
 
 // HVALS key
-func (b *Binlog) HVals(db uint32, args ...interface{}) ([][]byte, error) {
+func (b *Rpdb) HVals(db uint32, args ...interface{}) ([][]byte, error) {
 	if len(args) != 1 {
 		return nil, errArguments("len(args) = %d, expect = 1", len(args))
 	}
@@ -501,7 +501,7 @@ func (b *Binlog) HVals(db uint32, args ...interface{}) ([][]byte, error) {
 }
 
 // HSET key field value
-func (b *Binlog) HSet(db uint32, args ...interface{}) (int64, error) {
+func (b *Rpdb) HSet(db uint32, args ...interface{}) (int64, error) {
 	if len(args) != 3 {
 		return 0, errArguments("len(args) = %d, expect = 2", len(args))
 	}
@@ -552,7 +552,7 @@ func (b *Binlog) HSet(db uint32, args ...interface{}) (int64, error) {
 }
 
 // HSETNX key field value
-func (b *Binlog) HSetNX(db uint32, args ...interface{}) (int64, error) {
+func (b *Rpdb) HSetNX(db uint32, args ...interface{}) (int64, error) {
 	if len(args) != 3 {
 		return 0, errArguments("len(args) = %d, expect = 2", len(args))
 	}
@@ -599,7 +599,7 @@ func (b *Binlog) HSetNX(db uint32, args ...interface{}) (int64, error) {
 }
 
 // HMSET key field value [field value ...]
-func (b *Binlog) HMSet(db uint32, args ...interface{}) error {
+func (b *Rpdb) HMSet(db uint32, args ...interface{}) error {
 	if len(args) == 1 || len(args)%2 != 1 {
 		return errArguments("len(args) = %d, expect != 1 && mod 2 = 1", len(args))
 	}
@@ -658,7 +658,7 @@ func (b *Binlog) HMSet(db uint32, args ...interface{}) error {
 }
 
 // HMGET key field [field ...]
-func (b *Binlog) HMGet(db uint32, args ...interface{}) ([][]byte, error) {
+func (b *Rpdb) HMGet(db uint32, args ...interface{}) ([][]byte, error) {
 	if len(args) < 2 {
 		return nil, errArguments("len(args) = %d, expect >= 2", len(args))
 	}
